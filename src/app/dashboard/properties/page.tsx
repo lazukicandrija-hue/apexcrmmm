@@ -1,0 +1,244 @@
+'use client';
+import { useEffect, useState, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
+
+interface Property {
+  id:string; title:string; location:string; price:number; type:string; area:number;
+  rooms:number; status:string; published:number; owner_first_name:string; owner_last_name:string;
+  owner_phone:string; created_at:string;
+}
+interface Owner { id:string; first_name:string; last_name:string; phone:string; email:string; }
+
+const CATEGORY_LABELS: Record<string, string> = {
+  'Novogradnja': 'Novogradnja',
+  'Starogradnja': 'Starogradnja',
+  'Lokali': 'Lokali',
+  'Rente': 'Rente',
+};
+
+export default function PropertiesPage() {
+  const searchParams = useSearchParams();
+  const category = searchParams.get('category') || '';
+
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [owners, setOwners] = useState<Owner[]>([]);
+  const [search, setSearch] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
+  const [showModal, setShowModal] = useState(false);
+  const [toast, setToast] = useState<{msg:string;type:string}|null>(null);
+  const [form, setForm] = useState({
+    title:'',description:'',location:'',price:'',type:category || 'Novogradnja',area:'',rooms:'',
+    status:'Aktivna',owner_id:'',newOwnerFirst:'',newOwnerLast:'',newOwnerPhone:'',
+    newOwnerEmail:'',newOwnerNotes:'',createNewOwner:false
+  });
+
+  // Update default form type when category changes
+  useEffect(() => {
+    if (category) {
+      setForm(f => ({...f, type: category}));
+    }
+  }, [category]);
+
+  const load = useCallback(() => {
+    const params = new URLSearchParams();
+    if (search) params.set('search', search);
+    if (category) params.set('type', category);
+    if (filterStatus) params.set('status', filterStatus);
+    fetch(`/api/properties?${params}`).then(r=>r.json()).then(d=>setProperties(d.properties||[]));
+    fetch('/api/owners').then(r=>r.json()).then(d=>setOwners(d.owners||[]));
+  }, [search, category, filterStatus]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const showToast = (msg:string, type='success') => { setToast({msg,type}); setTimeout(()=>setToast(null), 3000); };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    let ownerId = form.owner_id;
+
+    if (form.createNewOwner) {
+      const res = await fetch('/api/owners', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({first_name:form.newOwnerFirst,last_name:form.newOwnerLast,phone:form.newOwnerPhone,email:form.newOwnerEmail,notes:form.newOwnerNotes})
+      });
+      const d = await res.json();
+      if (!res.ok) { showToast(d.error,'error'); return; }
+      ownerId = d.id;
+    }
+
+    if (!ownerId) { showToast('Izaberite vlasnika','error'); return; }
+
+    const res = await fetch('/api/properties', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({...form, price:Number(form.price), area:Number(form.area)||null, rooms:Number(form.rooms)||null, owner_id:ownerId, images:[]})
+    });
+    if (res.ok) { showToast('Nekretnina kreirana!'); setShowModal(false); load();
+      setForm({title:'',description:'',location:'',price:'',type:category || 'Novogradnja',area:'',rooms:'',status:'Aktivna',owner_id:'',newOwnerFirst:'',newOwnerLast:'',newOwnerPhone:'',newOwnerEmail:'',newOwnerNotes:'',createNewOwner:false});
+    } else { const d = await res.json(); showToast(d.error||'Greška','error'); }
+  };
+
+  const togglePublish = async (id:string) => {
+    const res = await fetch(`/api/properties/${id}/publish`, {method:'POST'});
+    if (res.ok) { const d = await res.json(); showToast(d.message); load(); }
+  };
+
+  const handleDelete = async (id:string) => {
+    if (!confirm('Obrisati nekretninu?')) return;
+    await fetch(`/api/properties/${id}`, {method:'DELETE'});
+    showToast('Nekretnina obrisana'); load();
+  };
+
+  const formatPrice = (p:number) => p >= 1000 ? `€${p.toLocaleString('sr-RS')}` : `€${p}/mes`;
+
+  const pageTitle = CATEGORY_LABELS[category] || 'Sve Nekretnine';
+  const isRente = category === 'Rente';
+
+  return (
+    <>
+      {toast && <div className={`toast toast-${toast.type}`}>{toast.msg}</div>}
+
+      <div className="table-card">
+        <div className="table-header">
+          <div className="table-title">{pageTitle} ({properties.length})</div>
+          <div className="table-actions">
+            <div className="search-wrap">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+              <input className="search-input" placeholder="Pretraži..." value={search} onChange={e=>setSearch(e.target.value)} />
+            </div>
+            <select className="filter-select" value={filterStatus} onChange={e=>setFilterStatus(e.target.value)}>
+              <option value="">Svi statusi</option>
+              <option>Aktivna</option><option>Prodato</option><option>U pregovoru</option>
+            </select>
+            <a href="/api/export/properties" className="btn-outline btn-sm">📥 CSV</a>
+            <button className="btn-gold btn-sm" onClick={()=>setShowModal(true)}>+ Dodaj</button>
+          </div>
+        </div>
+        <div className="table-overflow">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Naslov</th>
+                <th>Lokacija</th>
+                <th>{isRente ? 'Mesečno' : 'Cena'}</th>
+                {!category && <th>Tip</th>}
+                <th>m²</th>
+                <th>Status</th>
+                <th>Vlasnik</th>
+                <th>Sajt</th>
+                <th>Akcije</th>
+              </tr>
+            </thead>
+            <tbody>
+              {properties.map(p=>(
+                <tr key={p.id}>
+                  <td><Link href={`/dashboard/properties/${p.id}`} style={{color:'#fff',fontWeight:500}}>{p.title}</Link></td>
+                  <td style={{color:'var(--gray-300)',fontSize:'0.85rem'}}>{p.location}</td>
+                  <td style={{color:'var(--gold)',fontWeight:600}}>{formatPrice(p.price)}</td>
+                  {!category && <td><span className="badge badge-new">{p.type}</span></td>}
+                  <td>{p.area}m²</td>
+                  <td><span className={`badge ${p.status==='Aktivna'?'badge-active':p.status==='Prodato'?'badge-sold':'badge-negotiation'}`}>{p.status}</span></td>
+                  <td style={{fontSize:'0.85rem'}}>{p.owner_first_name} {p.owner_last_name}<br/><span style={{color:'var(--gray-300)',fontSize:'0.75rem'}}>{p.owner_phone}</span></td>
+                  <td><button className={`publish-toggle ${p.published?'published':'unpublished'}`} onClick={()=>togglePublish(p.id)}>{p.published?'✓ Objavljeno':'Objavi'}</button></td>
+                  <td><button className="btn-danger btn-sm" onClick={()=>handleDelete(p.id)}>🗑</button></td>
+                </tr>
+              ))}
+              {properties.length===0 && <tr><td colSpan={category ? 8 : 9} style={{textAlign:'center',padding:40,color:'var(--gray-300)'}}>Nema nekretnina u kategoriji {pageTitle}</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {showModal && (
+        <div className="modal-overlay" onClick={()=>setShowModal(false)}>
+          <div className="modal" onClick={e=>e.stopPropagation()}>
+            <div className="modal-header">
+              <div className="modal-title">Nova {pageTitle === 'Rente' ? 'Renta' : 'Nekretnina'}{category ? ` — ${pageTitle}` : ''}</div>
+              <button className="modal-close" onClick={()=>setShowModal(false)}>×</button>
+            </div>
+            <form onSubmit={handleSubmit}>
+              <div className="modal-body">
+                <div className="form-group">
+                  <label>Naslov *</label>
+                  <input className="form-input" required value={form.title} onChange={e=>setForm({...form,title:e.target.value})} placeholder={isRente ? 'Npr. Garsonjera — Grbavica' : 'Npr. Trosoban Stan — Centar'} />
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Lokacija *</label>
+                    <input className="form-input" required value={form.location} onChange={e=>setForm({...form,location:e.target.value})} placeholder="Centar, Novi Sad" />
+                  </div>
+                  <div className="form-group">
+                    <label>{isRente ? 'Mesečna Cena (€) *' : 'Cena (€) *'}</label>
+                    <input className="form-input" type="number" required value={form.price} onChange={e=>setForm({...form,price:e.target.value})} />
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Tip</label>
+                    <select className="form-select" value={form.type} onChange={e=>setForm({...form,type:e.target.value})}>
+                      <option>Novogradnja</option><option>Starogradnja</option><option>Lokali</option><option>Rente</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>Status</label>
+                    <select className="form-select" value={form.status} onChange={e=>setForm({...form,status:e.target.value})}>
+                      <option>Aktivna</option><option>Prodato</option><option>U pregovoru</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Površina (m²)</label>
+                    <input className="form-input" type="number" value={form.area} onChange={e=>setForm({...form,area:e.target.value})} />
+                  </div>
+                  <div className="form-group">
+                    <label>Broj Soba</label>
+                    <input className="form-input" type="number" value={form.rooms} onChange={e=>setForm({...form,rooms:e.target.value})} />
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label>Opis</label>
+                  <textarea className="form-textarea" value={form.description} onChange={e=>setForm({...form,description:e.target.value})} placeholder="Opis nekretnine..." />
+                </div>
+
+                <div style={{borderTop:'1px solid rgba(212,175,55,0.1)',margin:'20px 0',paddingTop:20}}>
+                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
+                    <label style={{color:'var(--gold)',fontFamily:'Cinzel,serif',fontSize:'0.95rem'}}>Vlasnik</label>
+                    <button type="button" className="btn-outline btn-sm" onClick={()=>setForm({...form,createNewOwner:!form.createNewOwner})}>
+                      {form.createNewOwner ? 'Izaberi Postojećeg' : '+ Novi Vlasnik'}
+                    </button>
+                  </div>
+
+                  {!form.createNewOwner ? (
+                    <div className="form-group">
+                      <select className="form-select" value={form.owner_id} onChange={e=>setForm({...form,owner_id:e.target.value})} required>
+                        <option value="">Izaberite vlasnika</option>
+                        {owners.map(o=><option key={o.id} value={o.id}>{o.first_name} {o.last_name} — {o.phone}</option>)}
+                      </select>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="form-row">
+                        <div className="form-group"><label>Ime *</label><input className="form-input" required value={form.newOwnerFirst} onChange={e=>setForm({...form,newOwnerFirst:e.target.value})} /></div>
+                        <div className="form-group"><label>Prezime *</label><input className="form-input" required value={form.newOwnerLast} onChange={e=>setForm({...form,newOwnerLast:e.target.value})} /></div>
+                      </div>
+                      <div className="form-row">
+                        <div className="form-group"><label>Telefon</label><input className="form-input" value={form.newOwnerPhone} onChange={e=>setForm({...form,newOwnerPhone:e.target.value})} /></div>
+                        <div className="form-group"><label>Email</label><input className="form-input" value={form.newOwnerEmail} onChange={e=>setForm({...form,newOwnerEmail:e.target.value})} /></div>
+                      </div>
+                      <div className="form-group"><label>Napomene</label><textarea className="form-textarea" value={form.newOwnerNotes} onChange={e=>setForm({...form,newOwnerNotes:e.target.value})} /></div>
+                    </>
+                  )}
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn-outline" onClick={()=>setShowModal(false)}>Otkaži</button>
+                <button type="submit" className="btn-gold">Kreiraj</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
