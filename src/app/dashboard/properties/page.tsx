@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
@@ -17,7 +17,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   'Rente': 'Rente',
 };
 
-export default function PropertiesPage() {
+function PropertiesPageInner() {
   const searchParams = useSearchParams();
   const category = searchParams.get('category') || '';
 
@@ -240,5 +240,13 @@ export default function PropertiesPage() {
         </div>
       )}
     </>
+  );
+}
+
+export default function PropertiesPage() {
+  return (
+    <Suspense fallback={<div />}>
+      <PropertiesPageInner />
+    </Suspense>
   );
 }

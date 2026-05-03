@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
@@ -7,7 +7,7 @@ interface User { id: string; username: string; full_name: string; role: string; 
 
 const PONUDA_TYPES = ['Novogradnja', 'Starogradnja', 'Lokali', 'Rente'];
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -151,5 +151,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className="page-content">{children}</div>
       </div>
     </div>
+  );
+}
+
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <Suspense fallback={<div style={{background:'#000',minHeight:'100vh'}} />}>
+      <DashboardLayoutInner>{children}</DashboardLayoutInner>
+    </Suspense>
   );
 }
