@@ -137,6 +137,7 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
           <p style={{color:'var(--gray-300)',margin:'4px 0 0'}}>{property.location}</p>
         </div>
         <div style={{display:'flex',gap:10}}>
+          <a href={`/api/properties/${id}/pdf`} target="_blank" className="btn-outline btn-sm" style={{padding:'8px 16px',display:'inline-flex',alignItems:'center',gap:6}}>📄 PDF Sheet</a>
           <button className={`publish-toggle ${property.published?'published':'unpublished'}`} onClick={togglePublish}
             style={{padding:'8px 16px'}}>{property.published ? '✓ Objavljeno na Sajtu' : 'Objavi na Sajt'}</button>
           <button className="btn-danger btn-sm" onClick={handleDelete}>🗑 Obriši</button>
