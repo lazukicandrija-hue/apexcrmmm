@@ -10,7 +10,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   
   const property = db.prepare(`
     SELECT p.id, p.title, p.description, p.location, p.price, p.type, p.area, p.rooms,
-           p.images, p.created_at
+           p.images, p.created_at, p.floor, p.condition, p.parking, p.terrace, p.heating
     FROM properties p
     WHERE p.id = ? AND p.published = 1 AND p.status = 'Aktivna'
   `).get(id) as Record<string, unknown> | undefined;
@@ -30,6 +30,11 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     rooms: property.rooms,
     images: (JSON.parse((property.images as string) || '[]') as string[]).map(img => img.startsWith('http') ? img : CRM_BASE + img),
     created_at: property.created_at,
+    floor: property.floor || null,
+    condition: property.condition || null,
+    parking: property.parking || null,
+    terrace: property.terrace || null,
+    heating: property.heating || null,
   };
 
   return NextResponse.json({ property: formatted }, {

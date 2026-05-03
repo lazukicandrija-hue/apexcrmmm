@@ -1,9 +1,10 @@
 'use client';
-import { useEffect, useState, Suspense } from 'react';
+import { useEffect, useState, useRef, Suspense } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
 interface User { id: string; username: string; full_name: string; role: string; }
+interface SearchResult { type:string; id:string; title:string; subtitle:string; badge:string; href:string; icon:string; }
 
 const PONUDA_TYPES = ['Novogradnja', 'Starogradnja', 'Lokali', 'Rente'];
 
@@ -17,6 +18,11 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
   const [pwModal, setPwModal] = useState(false);
   const [pwForm, setPwForm] = useState({currentPassword:'',newPassword:'',confirmPassword:''});
   const [pwToast, setPwToast] = useState<{msg:string;type:string}|null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
+  const searchTimeout = useRef<NodeJS.Timeout|null>(null);
 
   const currentCategory = searchParams.get('category') || '';
 
@@ -33,6 +39,15 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
       setPonudaOpen(true);
     }
   }, [pathname, currentCategory]);
+
+  // Close search on click outside
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) setSearchOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' });
@@ -143,6 +158,52 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
             <button className="hamburger" onClick={() => setSidebarOpen(true)}>☰</button>
             <div className="topbar-title">{getTopbarTitle()}</div>
+          </div>
+          {/* Global Search */}
+          <div ref={searchRef} style={{position:'relative',flex:'0 1 360px'}}>
+            <div style={{position:'relative'}}>
+              <svg style={{position:'absolute',left:12,top:'50%',transform:'translateY(-50%)',opacity:0.4}} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+              <input
+                className="form-input"
+                placeholder="Pretraži nekretnine, kupce, vlasnike..."
+                value={searchQuery}
+                onChange={e => {
+                  const val = e.target.value;
+                  setSearchQuery(val);
+                  if (searchTimeout.current) clearTimeout(searchTimeout.current);
+                  if (val.trim().length < 2) { setSearchResults([]); setSearchOpen(false); return; }
+                  searchTimeout.current = setTimeout(async () => {
+                    const res = await fetch(`/api/search?q=${encodeURIComponent(val)}`);
+                    const d = await res.json();
+                    setSearchResults(d.results || []);
+                    setSearchOpen(true);
+                  }, 300);
+                }}
+                onFocus={() => { if (searchResults.length > 0) setSearchOpen(true); }}
+                style={{paddingLeft:36,fontSize:'0.85rem',background:'rgba(255,255,255,0.05)',border:'1px solid rgba(212,175,55,0.15)',borderRadius:8,width:'100%'}}
+              />
+            </div>
+            {searchOpen && searchResults.length > 0 && (
+              <div style={{position:'absolute',top:'100%',left:0,right:0,marginTop:6,background:'#1a1a1a',border:'1px solid rgba(212,175,55,0.2)',borderRadius:10,overflow:'hidden',zIndex:100,boxShadow:'0 8px 32px rgba(0,0,0,0.5)'}}>
+                {searchResults.map(r => (
+                  <Link key={`${r.type}-${r.id}`} href={r.href}
+                    onClick={() => { setSearchOpen(false); setSearchQuery(''); setSearchResults([]); }}
+                    style={{display:'flex',alignItems:'center',gap:12,padding:'10px 14px',color:'#fff',fontSize:'0.85rem',borderBottom:'1px solid rgba(255,255,255,0.05)',transition:'background 0.15s'}}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(212,175,55,0.08)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                    <span style={{fontSize:18}}>{r.icon}</span>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontWeight:500,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{r.title}</div>
+                      <div style={{fontSize:'0.75rem',color:'var(--gray-300)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{r.subtitle}</div>
+                    </div>
+                    <span className={`badge ${r.badge==='Aktivna'||r.badge==='Aktivan'?'badge-active':r.badge==='Prodato'?'badge-sold':'badge-negotiation'}`} style={{fontSize:'0.7rem'}}>{r.badge}</span>
+                  </Link>
+                ))}
+                {searchResults.length === 0 && (
+                  <div style={{padding:'16px',textAlign:'center',color:'var(--gray-300)',fontSize:'0.85rem'}}>Nema rezultata</div>
+                )}
+              </div>
+            )}
           </div>
           <div className="topbar-user">
             <div className="topbar-user-info">

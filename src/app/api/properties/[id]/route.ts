@@ -32,11 +32,14 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 
     db.prepare(`
       UPDATE properties SET title=?, description=?, location=?, price=?, type=?, area=?, rooms=?,
-      status=?, owner_id=?, images=?, published=?, updated_at=datetime('now') WHERE id=?
+      status=?, owner_id=?, images=?, published=?, floor=?, condition=?, parking=?, terrace=?, heating=?,
+      updated_at=datetime('now') WHERE id=?
     `).run(
       body.title, body.description || '', body.location, body.price, body.type,
       body.area || null, body.rooms || null, body.status || 'Aktivna',
-      body.owner_id, JSON.stringify(body.images || []), body.published ? 1 : 0, id
+      body.owner_id, JSON.stringify(body.images || []), body.published ? 1 : 0,
+      body.floor || null, body.condition || null, body.parking || null,
+      body.terrace || null, body.heating || null, id
     );
 
     return NextResponse.json({ message: 'Nekretnina ažurirana' });

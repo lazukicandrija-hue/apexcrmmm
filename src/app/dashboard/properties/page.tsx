@@ -30,7 +30,8 @@ function PropertiesPageInner() {
   const [form, setForm] = useState({
     title:'',description:'',location:'',price:'',type:category || 'Novogradnja',area:'',rooms:'',
     status:'Aktivna',owner_id:'',newOwnerFirst:'',newOwnerLast:'',newOwnerPhone:'',
-    newOwnerEmail:'',newOwnerNotes:'',createNewOwner:false
+    newOwnerEmail:'',newOwnerNotes:'',createNewOwner:false,
+    floor:'',condition:'',parking:'',terrace:'',heating:''
   });
 
   // Update default form type when category changes
@@ -74,7 +75,7 @@ function PropertiesPageInner() {
       body: JSON.stringify({...form, price:Number(form.price), area:Number(form.area)||null, rooms:Number(form.rooms)||null, owner_id:ownerId, images:[]})
     });
     if (res.ok) { showToast('Nekretnina kreirana!'); setShowModal(false); load();
-      setForm({title:'',description:'',location:'',price:'',type:category || 'Novogradnja',area:'',rooms:'',status:'Aktivna',owner_id:'',newOwnerFirst:'',newOwnerLast:'',newOwnerPhone:'',newOwnerEmail:'',newOwnerNotes:'',createNewOwner:false});
+      setForm({title:'',description:'',location:'',price:'',type:category || 'Novogradnja',area:'',rooms:'',status:'Aktivna',owner_id:'',newOwnerFirst:'',newOwnerLast:'',newOwnerPhone:'',newOwnerEmail:'',newOwnerNotes:'',createNewOwner:false,floor:'',condition:'',parking:'',terrace:'',heating:''});
     } else { const d = await res.json(); showToast(d.error||'Greška','error'); }
   };
 
@@ -199,6 +200,42 @@ function PropertiesPageInner() {
                 <div className="form-group">
                   <label>Opis</label>
                   <textarea className="form-textarea" value={form.description} onChange={e=>setForm({...form,description:e.target.value})} placeholder="Opis nekretnine..." />
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Sprat</label>
+                    <input className="form-input" value={form.floor} onChange={e=>setForm({...form,floor:e.target.value})} placeholder="Npr. 5. sprat" />
+                  </div>
+                  <div className="form-group">
+                    <label>Stanje</label>
+                    <select className="form-select" value={form.condition} onChange={e=>setForm({...form,condition:e.target.value})}>
+                      <option value="">-</option>
+                      <option>Renoviran</option><option>Useljiv</option><option>Potrebna Adaptacija</option><option>U izgradnji</option><option>Lux</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Parking</label>
+                    <select className="form-select" value={form.parking} onChange={e=>setForm({...form,parking:e.target.value})}>
+                      <option value="">-</option>
+                      <option>Garaža</option><option>Parking mesto</option><option>Ulica</option><option>Nema</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>Terasa</label>
+                    <select className="form-select" value={form.terrace} onChange={e=>setForm({...form,terrace:e.target.value})}>
+                      <option value="">-</option>
+                      <option>Da</option><option>2 terase</option><option>Lodža</option><option>Balkon</option><option>Nema</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label>Grejanje</label>
+                  <select className="form-select" value={form.heating} onChange={e=>setForm({...form,heating:e.target.value})}>
+                    <option value="">-</option>
+                    <option>Centralno</option><option>Etažno</option><option>Gas</option><option>Klima</option><option>TA peć</option>
+                  </select>
                 </div>
 
                 <div style={{borderTop:'1px solid rgba(212,175,55,0.1)',margin:'20px 0',paddingTop:20}}>

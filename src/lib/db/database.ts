@@ -88,6 +88,16 @@ function initializeSchema(database: Database.Database) {
     );
   `);
 
+  // Migrate: add new property fields (safe to run multiple times)
+  const addColumnSafe = (table: string, col: string, type: string) => {
+    try { database.exec(`ALTER TABLE ${table} ADD COLUMN ${col} ${type}`); } catch { /* column already exists */ }
+  };
+  addColumnSafe('properties', 'floor', 'TEXT');
+  addColumnSafe('properties', 'condition', 'TEXT');
+  addColumnSafe('properties', 'parking', 'TEXT');
+  addColumnSafe('properties', 'terrace', 'TEXT');
+  addColumnSafe('properties', 'heating', 'TEXT');
+
   // Seed admin user if no users exist
   const userCount = database.prepare('SELECT COUNT(*) as count FROM users').get() as { count: number };
   if (userCount.count === 0) {

@@ -8,6 +8,7 @@ interface Property {
   area:number; rooms:number; status:string; published:number; images:string; next_action_date:string;
   owner_first_name:string; owner_last_name:string; owner_phone:string; owner_email:string; owner_notes:string;
   owner_id:string; created_at:string; updated_at:string;
+  floor:string; condition:string; parking:string; terrace:string; heating:string;
 }
 interface NoteEntry { id:string; content:string; created_at:string; }
 
@@ -195,6 +196,11 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
               </div>
             </div>
             <div className="detail-row"><span className="detail-label">Dodato</span><span className="detail-value">{new Date(property.created_at).toLocaleDateString('sr-RS')}</span></div>
+            {property.floor && <div className="detail-row"><span className="detail-label">Sprat</span><span className="detail-value">{property.floor}</span></div>}
+            {property.condition && <div className="detail-row"><span className="detail-label">Stanje</span><span className="detail-value">{property.condition}</span></div>}
+            {property.parking && <div className="detail-row"><span className="detail-label">Parking</span><span className="detail-value">{property.parking}</span></div>}
+            {property.terrace && <div className="detail-row"><span className="detail-label">Terasa</span><span className="detail-value">{property.terrace}</span></div>}
+            {property.heating && <div className="detail-row"><span className="detail-label">Grejanje</span><span className="detail-value">{property.heating}</span></div>}
             {property.description && <div style={{marginTop:16}}><div className="detail-label" style={{marginBottom:8}}>Opis</div><p style={{fontSize:'0.88rem',lineHeight:1.6,color:'var(--gray-200)'}}>{property.description}</p></div>}
           </div>
 

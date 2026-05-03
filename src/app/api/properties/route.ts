@@ -50,12 +50,14 @@ export async function POST(request: Request) {
     const id = uuidv4();
 
     db.prepare(`
-      INSERT INTO properties (id, title, description, location, price, type, area, rooms, status, owner_id, images, published)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO properties (id, title, description, location, price, type, area, rooms, status, owner_id, images, published, floor, condition, parking, terrace, heating)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       id, body.title, body.description || '', body.location, body.price, body.type,
       body.area || null, body.rooms || null, body.status || 'Aktivna',
-      body.owner_id, JSON.stringify(body.images || []), body.published ? 1 : 0
+      body.owner_id, JSON.stringify(body.images || []), body.published ? 1 : 0,
+      body.floor || null, body.condition || null, body.parking || null,
+      body.terrace || null, body.heating || null
     );
 
     return NextResponse.json({ id, message: 'Nekretnina kreirana' }, { status: 201 });
