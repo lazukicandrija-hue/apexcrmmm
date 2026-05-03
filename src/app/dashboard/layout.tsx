@@ -14,6 +14,9 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [ponudaOpen, setPonudaOpen] = useState(false);
+  const [pwModal, setPwModal] = useState(false);
+  const [pwForm, setPwForm] = useState({currentPassword:'',newPassword:'',confirmPassword:''});
+  const [pwToast, setPwToast] = useState<{msg:string;type:string}|null>(null);
 
   const currentCategory = searchParams.get('category') || '';
 
@@ -130,6 +133,7 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
           )}
         </nav>
         <div className="sidebar-footer">
+          <button className="nav-item" onClick={() => setPwModal(true)}>🔑 Promeni Lozinku</button>
           <button className="nav-item" onClick={handleLogout}>🚪 Odjava</button>
         </div>
       </aside>
@@ -150,6 +154,47 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
         </header>
         <div className="page-content">{children}</div>
       </div>
+
+      {/* Password Change Modal */}
+      {pwModal && (
+        <div className="modal-overlay" onClick={() => setPwModal(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <div className="modal-title">🔒 Promeni Lozinku</div>
+              <button className="modal-close" onClick={() => setPwModal(false)}>×</button>
+            </div>
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              if (pwForm.newPassword !== pwForm.confirmPassword) {
+                setPwToast({msg:'Lozinke se ne poklapaju',type:'error'}); setTimeout(()=>setPwToast(null),3000); return;
+              }
+              const res = await fetch('/api/auth/password', {
+                method:'PUT', headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({currentPassword:pwForm.currentPassword,newPassword:pwForm.newPassword})
+              });
+              const d = await res.json();
+              if (res.ok) {
+                setPwToast({msg:d.message,type:'success'}); setTimeout(()=>{setPwToast(null);setPwModal(false);},2000);
+                setPwForm({currentPassword:'',newPassword:'',confirmPassword:''});
+              } else { setPwToast({msg:d.error,type:'error'}); setTimeout(()=>setPwToast(null),3000); }
+            }}>
+              <div className="modal-body">
+                {pwToast && <div style={{padding:'8px 12px',borderRadius:8,marginBottom:12,fontSize:'0.85rem',
+                  background:pwToast.type==='error'?'rgba(255,60,60,0.15)':'rgba(76,175,80,0.15)',
+                  color:pwToast.type==='error'?'#ff6b6b':'#4caf50',border:`1px solid ${pwToast.type==='error'?'rgba(255,60,60,0.3)':'rgba(76,175,80,0.3)'}`
+                }}>{pwToast.msg}</div>}
+                <div className="form-group"><label>Trenutna Lozinka *</label><input className="form-input" type="password" required value={pwForm.currentPassword} onChange={e=>setPwForm({...pwForm,currentPassword:e.target.value})} /></div>
+                <div className="form-group"><label>Nova Lozinka *</label><input className="form-input" type="password" required minLength={4} value={pwForm.newPassword} onChange={e=>setPwForm({...pwForm,newPassword:e.target.value})} /></div>
+                <div className="form-group"><label>Potvrdi Novu Lozinku *</label><input className="form-input" type="password" required value={pwForm.confirmPassword} onChange={e=>setPwForm({...pwForm,confirmPassword:e.target.value})} /></div>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn-outline" onClick={() => setPwModal(false)}>Otkaži</button>
+                <button type="submit" className="btn-gold">Promeni</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

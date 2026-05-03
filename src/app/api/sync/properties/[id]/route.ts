@@ -3,6 +3,7 @@ import { getDb } from '@/lib/db/database';
 
 // Public endpoint - get single published property by ID (for website)
 // NO auth required, NO private data exposed
+const CRM_BASE = 'https://crm.apexrealestate.rs';
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const db = getDb();
@@ -27,7 +28,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     type: property.type,
     area: property.area,
     rooms: property.rooms,
-    images: JSON.parse((property.images as string) || '[]'),
+    images: (JSON.parse((property.images as string) || '[]') as string[]).map(img => img.startsWith('http') ? img : CRM_BASE + img),
     created_at: property.created_at,
   };
 

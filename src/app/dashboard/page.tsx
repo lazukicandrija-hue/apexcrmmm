@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 
-interface Property { id:string; title:string; location:string; price:number; type:string; status:string; created_at:string; }
+interface Property { id:string; title:string; location:string; price:number; type:string; status:string; created_at:string; next_action_date:string; }
 interface Buyer { id:string; first_name:string; last_name:string; next_action_date:string; status:string; desired_type:string; }
 
 export default function DashboardPage() {
@@ -17,7 +17,20 @@ export default function DashboardPage() {
   const activeProps = properties.filter(p => p.status === 'Aktivna').length;
   const soldProps = properties.filter(p => p.status === 'Prodato').length;
   const today = new Date().toISOString().split('T')[0];
-  const overdueBuyers = buyers.filter(b => b.next_action_date && b.next_action_date < today).length;
+  const overdueBuyers = buyers.filter(b => b.next_action_date && b.next_action_date < today);
+  const overdueProps = properties.filter(p => p.next_action_date && p.next_action_date < today);
+  const soonBuyers = buyers.filter(b => {
+    if (!b.next_action_date || b.next_action_date < today) return false;
+    const diff = (new Date(b.next_action_date).getTime() - new Date(today).getTime()) / 86400000;
+    return diff <= 3;
+  });
+  const soonProps = properties.filter(p => {
+    if (!p.next_action_date || p.next_action_date < today) return false;
+    const diff = (new Date(p.next_action_date).getTime() - new Date(today).getTime()) / 86400000;
+    return diff <= 3;
+  });
+  const totalOverdue = overdueBuyers.length + overdueProps.length;
+  const totalSoon = soonBuyers.length + soonProps.length;
 
   const getDateBadge = (date: string) => {
     if (!date) return '';
@@ -32,6 +45,60 @@ export default function DashboardPage() {
 
   return (
     <>
+      {/* Reminders Alert */}
+      {(totalOverdue > 0 || totalSoon > 0) && (
+        <div style={{marginBottom:24,borderRadius:12,overflow:'hidden'}}>
+          {totalOverdue > 0 && (
+            <div style={{background:'rgba(255,60,60,0.12)',border:'1px solid rgba(255,60,60,0.25)',borderRadius:totalSoon>0?'12px 12px 0 0':12,padding:'16px 20px'}}>
+              <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:10}}>
+                <span style={{fontSize:20}}>🚨</span>
+                <span style={{color:'#ff6b6b',fontWeight:600,fontSize:'0.95rem'}}>Prosročeni Follow-up ({totalOverdue})</span>
+              </div>
+              <div style={{display:'flex',flexDirection:'column',gap:6}}>
+                {overdueProps.map(p => (
+                  <Link key={p.id} href={`/dashboard/properties/${p.id}`}
+                    style={{color:'#fff',fontSize:'0.85rem',display:'flex',justifyContent:'space-between',padding:'6px 10px',background:'rgba(0,0,0,0.2)',borderRadius:6}}>
+                    <span>🏠 {p.title}</span>
+                    <span className="badge badge-overdue">{formatDate(p.next_action_date)}</span>
+                  </Link>
+                ))}
+                {overdueBuyers.map(b => (
+                  <Link key={b.id} href={`/dashboard/buyers/${b.id}`}
+                    style={{color:'#fff',fontSize:'0.85rem',display:'flex',justifyContent:'space-between',padding:'6px 10px',background:'rgba(0,0,0,0.2)',borderRadius:6}}>
+                    <span>👤 {b.first_name} {b.last_name}</span>
+                    <span className="badge badge-overdue">{formatDate(b.next_action_date)}</span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+          {totalSoon > 0 && (
+            <div style={{background:'rgba(255,193,7,0.08)',border:'1px solid rgba(255,193,7,0.2)',borderRadius:totalOverdue>0?'0 0 12px 12px':12,padding:'16px 20px'}}>
+              <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:10}}>
+                <span style={{fontSize:20}}>⏰</span>
+                <span style={{color:'#D4AF37',fontWeight:600,fontSize:'0.95rem'}}>Uskoro ({totalSoon})</span>
+              </div>
+              <div style={{display:'flex',flexDirection:'column',gap:6}}>
+                {soonProps.map(p => (
+                  <Link key={p.id} href={`/dashboard/properties/${p.id}`}
+                    style={{color:'#fff',fontSize:'0.85rem',display:'flex',justifyContent:'space-between',padding:'6px 10px',background:'rgba(0,0,0,0.15)',borderRadius:6}}>
+                    <span>🏠 {p.title}</span>
+                    <span className="badge badge-soon">{formatDate(p.next_action_date)}</span>
+                  </Link>
+                ))}
+                {soonBuyers.map(b => (
+                  <Link key={b.id} href={`/dashboard/buyers/${b.id}`}
+                    style={{color:'#fff',fontSize:'0.85rem',display:'flex',justifyContent:'space-between',padding:'6px 10px',background:'rgba(0,0,0,0.15)',borderRadius:6}}>
+                    <span>👤 {b.first_name} {b.last_name}</span>
+                    <span className="badge badge-soon">{formatDate(b.next_action_date)}</span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="stats-grid">
         <div className="stat-card">
           <div className="stat-card-header">
@@ -65,7 +132,7 @@ export default function DashboardPage() {
           <div className="stat-card-header">
             <div className="stat-card-icon red">⏰</div>
           </div>
-          <div className="stat-card-value">{overdueBuyers}</div>
+          <div className="stat-card-value">{totalOverdue}</div>
           <div className="stat-card-label">Prosročenih Akcija</div>
         </div>
       </div>

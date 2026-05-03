@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, use } from 'react';
+import { useEffect, useState, useRef, use } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
@@ -21,12 +21,16 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
   const [newPropNote, setNewPropNote] = useState('');
   const [newOwnerNote, setNewOwnerNote] = useState('');
   const [nextActionDate, setNextActionDate] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const [propertyImages, setPropertyImages] = useState<string[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const load = () => {
     fetch(`/api/properties/${id}`).then(r=>r.json()).then(d=>{
       if (d.property) {
         setProperty(d.property);
         setNextActionDate(d.property.next_action_date || '');
+        setPropertyImages(JSON.parse(d.property.images || '[]'));
         // Load property notes
         fetch(`/api/notes?entity_type=property&entity_id=${d.property.id}`).then(r=>r.json()).then(n=>setPropNotes(n.notes||[]));
         // Load owner notes
@@ -77,6 +81,33 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
     }
   };
 
+  const handleImageUpload = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    setUploading(true);
+    const formData = new FormData();
+    Array.from(files).forEach(f => formData.append('images', f));
+    try {
+      const res = await fetch(`/api/properties/${id}/images`, { method: 'POST', body: formData });
+      const d = await res.json();
+      if (res.ok) {
+        showToast(d.message);
+        setPropertyImages(d.images);
+      } else showToast(d.error || 'Greška', 'error');
+    } catch { showToast('Greška pri uploadu', 'error'); }
+    setUploading(false);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const deleteImage = async (imgPath: string) => {
+    if (!confirm('Obrisati ovu sliku?')) return;
+    const res = await fetch(`/api/properties/${id}/images`, {
+      method: 'DELETE', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ imagePath: imgPath })
+    });
+    const d = await res.json();
+    if (res.ok) { showToast('Slika obrisana'); setPropertyImages(d.images); }
+  };
+
   const handleDelete = async () => {
     if (!confirm('Obrisati nekretninu?')) return;
     await fetch(`/api/properties/${id}`, {method:'DELETE'});
@@ -114,6 +145,40 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
       <div className="detail-grid">
         {/* Left column */}
         <div>
+          {/* Image Gallery & Upload */}
+          <div className="detail-card" style={{marginBottom:20}}>
+            <div className="detail-card-title">📷 Slike Nekretnine ({propertyImages.length})</div>
+            {propertyImages.length > 0 && (
+              <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(120px,1fr))',gap:10,marginBottom:16}}>
+                {propertyImages.map((img,i) => (
+                  <div key={i} style={{position:'relative',borderRadius:8,overflow:'hidden',aspectRatio:'4/3',background:'#1a1a1a'}}>
+                    <img src={img} alt={`Slika ${i+1}`} style={{width:'100%',height:'100%',objectFit:'cover'}} />
+                    <button onClick={() => deleteImage(img)}
+                      style={{position:'absolute',top:4,right:4,background:'rgba(0,0,0,0.7)',border:'none',color:'#ff4444',cursor:'pointer',
+                        borderRadius:'50%',width:24,height:24,display:'flex',alignItems:'center',justifyContent:'center',fontSize:14}}
+                      title="Obriši sliku">✕</button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              onDragOver={e => { e.preventDefault(); e.currentTarget.style.borderColor = '#D4AF37'; }}
+              onDragLeave={e => { e.currentTarget.style.borderColor = 'rgba(212,175,55,0.2)'; }}
+              onDrop={e => { e.preventDefault(); e.currentTarget.style.borderColor = 'rgba(212,175,55,0.2)'; handleImageUpload(e.dataTransfer.files); }}
+              style={{border:'2px dashed rgba(212,175,55,0.2)',borderRadius:12,padding:'24px 16px',textAlign:'center',
+                cursor:'pointer',transition:'all 0.3s',background:'rgba(212,175,55,0.03)'}}
+            >
+              <div style={{fontSize:28,marginBottom:8}}>{uploading ? '⏳' : '📁'}</div>
+              <div style={{color:'var(--gold)',fontSize:'0.9rem',fontWeight:500}}>
+                {uploading ? 'Uploadujem...' : 'Klikni ili prevuci slike ovde'}
+              </div>
+              <div style={{color:'var(--gray-300)',fontSize:'0.78rem',marginTop:4}}>JPG, PNG, WebP — do 10MB</div>
+            </div>
+            <input ref={fileInputRef} type="file" multiple accept="image/*" style={{display:'none'}}
+              onChange={e => handleImageUpload(e.target.files)} />
+          </div>
+
           <div className="detail-card" style={{marginBottom:20}}>
             <div className="detail-card-title">Detalji Nekretnine</div>
             <div className="detail-row"><span className="detail-label">Cena</span><span className="detail-value" style={{color:'var(--gold)',fontSize:'1.1rem'}}>{formatPrice(property.price)}</span></div>

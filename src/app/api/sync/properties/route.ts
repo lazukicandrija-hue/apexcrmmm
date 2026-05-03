@@ -3,6 +3,7 @@ import { getDb } from '@/lib/db/database';
 
 // Public endpoint - no auth needed (for website integration)
 // ONLY exposes safe, public-facing property data
+const CRM_BASE = 'https://crm.apexrealestate.rs';
 export async function GET() {
   const db = getDb();
   const properties = db.prepare(`
@@ -22,7 +23,7 @@ export async function GET() {
     type: p.type,
     area: p.area,
     rooms: p.rooms,
-    images: JSON.parse((p.images as string) || '[]'),
+    images: (JSON.parse((p.images as string) || '[]') as string[]).map(img => img.startsWith('http') ? img : CRM_BASE + img),
     created_at: p.created_at,
   }));
 
