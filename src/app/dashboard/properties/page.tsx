@@ -6,7 +6,7 @@ import Link from 'next/link';
 interface Property {
   id:string; title:string; location:string; price:number; type:string; area:number;
   rooms:number; status:string; published:number; owner_first_name:string; owner_last_name:string;
-  owner_phone:string; created_at:string;
+  owner_phone:string; created_at:string; contract_signed:number;
 }
 interface Owner { id:string; first_name:string; last_name:string; phone:string; email:string; }
 
@@ -125,6 +125,7 @@ function PropertiesPageInner() {
                 {!category && <th>Tip</th>}
                 <th>m²</th>
                 <th>Status</th>
+                <th>Ugovor</th>
                 <th>Vlasnik</th>
                 <th>Sajt</th>
                 <th>Akcije</th>
@@ -139,12 +140,16 @@ function PropertiesPageInner() {
                   {!category && <td><span className="badge badge-new">{p.type}</span></td>}
                   <td>{p.area}m²</td>
                   <td><span className={`badge ${p.status==='Aktivna'?'badge-active':p.status==='Prodato'?'badge-sold':'badge-negotiation'}`}>{p.status}</span></td>
+                  <td><span style={{fontSize:'0.78rem',fontWeight:600,padding:'3px 8px',borderRadius:6,
+                    background: p.contract_signed ? 'rgba(76,175,80,0.12)' : 'rgba(255,152,0,0.1)',
+                    color: p.contract_signed ? '#66bb6a' : '#ffb74d'
+                  }}>{p.contract_signed ? '✓ Da' : '✕ Ne'}</span></td>
                   <td style={{fontSize:'0.85rem'}}>{p.owner_first_name} {p.owner_last_name}<br/><span style={{color:'var(--gray-300)',fontSize:'0.75rem'}}>{p.owner_phone}</span></td>
                   <td><button className={`publish-toggle ${p.published?'published':'unpublished'}`} onClick={()=>togglePublish(p.id)}>{p.published?'✓ Objavljeno':'Objavi'}</button></td>
                   <td><button className="btn-danger btn-sm" onClick={()=>handleDelete(p.id)}>🗑</button></td>
                 </tr>
               ))}
-              {properties.length===0 && <tr><td colSpan={category ? 8 : 9} style={{textAlign:'center',padding:40,color:'var(--gray-300)'}}>Nema nekretnina u kategoriji {pageTitle}</td></tr>}
+              {properties.length===0 && <tr><td colSpan={category ? 9 : 10} style={{textAlign:'center',padding:40,color:'var(--gray-300)'}}>Nema nekretnina u kategoriji {pageTitle}</td></tr>}
             </tbody>
           </table>
         </div>

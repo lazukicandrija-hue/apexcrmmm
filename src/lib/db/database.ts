@@ -86,6 +86,18 @@ function initializeSchema(database: Database.Database) {
       content TEXT NOT NULL,
       created_at TEXT DEFAULT (datetime('now'))
     );
+
+    CREATE TABLE IF NOT EXISTS api_keys (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      key_hash TEXT NOT NULL,
+      key_prefix TEXT NOT NULL,
+      permissions TEXT DEFAULT '["read","write"]',
+      active INTEGER DEFAULT 1,
+      created_by TEXT NOT NULL REFERENCES users(id),
+      last_used_at TEXT,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
   `);
 
   // Migrate: add new property fields (safe to run multiple times)
@@ -97,6 +109,8 @@ function initializeSchema(database: Database.Database) {
   addColumnSafe('properties', 'parking', 'TEXT');
   addColumnSafe('properties', 'terrace', 'TEXT');
   addColumnSafe('properties', 'heating', 'TEXT');
+  addColumnSafe('properties', 'cadastral_notes', 'TEXT');
+  addColumnSafe('properties', 'contract_signed', 'INTEGER DEFAULT 0');
 
   // Seed admin user if no users exist
   const userCount = database.prepare('SELECT COUNT(*) as count FROM users').get() as { count: number };

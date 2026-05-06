@@ -77,6 +77,7 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
     }
     if (pathname.includes('buyers')) return 'Kupci';
     if (pathname.includes('users')) return 'Korisnici';
+    if (pathname.includes('api-keys')) return 'API Ključevi';
     return '';
   };
 
@@ -140,11 +141,18 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
 
           {/* Admin */}
           {user?.role === 'admin' && (
+            <>
             <Link href="/dashboard/users"
               className={`nav-item ${pathname.includes('users') ? 'active' : ''}`}
               onClick={() => setSidebarOpen(false)}>
               <span>⚙️</span> Korisnici
             </Link>
+            <Link href="/dashboard/api-keys"
+              className={`nav-item ${pathname.includes('api-keys') ? 'active' : ''}`}
+              onClick={() => setSidebarOpen(false)}>
+              <span>🤖</span> API Ključevi
+            </Link>
+            </>
           )}
         </nav>
         <div className="sidebar-footer">

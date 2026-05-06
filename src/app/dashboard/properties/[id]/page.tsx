@@ -9,6 +9,7 @@ interface Property {
   owner_first_name:string; owner_last_name:string; owner_phone:string; owner_email:string; owner_notes:string;
   owner_id:string; created_at:string; updated_at:string;
   floor:string; condition:string; parking:string; terrace:string; heating:string;
+  cadastral_notes:string; contract_signed:number;
 }
 interface NoteEntry { id:string; content:string; created_at:string; }
 
@@ -24,6 +25,9 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
   const [nextActionDate, setNextActionDate] = useState('');
   const [uploading, setUploading] = useState(false);
   const [propertyImages, setPropertyImages] = useState<string[]>([]);
+  const [cadastralNotes, setCadastralNotes] = useState('');
+  const [contractSigned, setContractSigned] = useState(false);
+  const [savingCadastral, setSavingCadastral] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const load = () => {
@@ -32,6 +36,8 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
         setProperty(d.property);
         setNextActionDate(d.property.next_action_date || '');
         setPropertyImages(JSON.parse(d.property.images || '[]'));
+        setCadastralNotes(d.property.cadastral_notes || '');
+        setContractSigned(!!d.property.contract_signed);
         // Load property notes
         fetch(`/api/notes?entity_type=property&entity_id=${d.property.id}`).then(r=>r.json()).then(n=>setPropNotes(n.notes||[]));
         // Load owner notes
@@ -80,6 +86,26 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
       showToast(d.message);
       setProperty(prev => prev ? {...prev, published: prev.published ? 0 : 1} : prev);
     }
+  };
+
+  const toggleContract = async () => {
+    const res = await fetch(`/api/properties/${id}/contract`, {method:'POST'});
+    if (res.ok) {
+      const d = await res.json();
+      showToast(d.message);
+      setContractSigned(!contractSigned);
+      setProperty(prev => prev ? {...prev, contract_signed: prev.contract_signed ? 0 : 1} : prev);
+    }
+  };
+
+  const saveCadastralNotes = async () => {
+    setSavingCadastral(true);
+    const res = await fetch(`/api/properties/${id}/cadastral`, {
+      method: 'PUT', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ cadastral_notes: cadastralNotes })
+    });
+    if (res.ok) showToast('Katastar beleška sačuvana ✓');
+    setSavingCadastral(false);
   };
 
   const handleImageUpload = async (files: FileList | null) => {
@@ -136,8 +162,18 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
           <h2 style={{margin:0,fontSize:'1.5rem'}}>{property.title}</h2>
           <p style={{color:'var(--gray-300)',margin:'4px 0 0'}}>{property.location}</p>
         </div>
-        <div style={{display:'flex',gap:10}}>
+        <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
           <a href={`/api/properties/${id}/pdf`} target="_blank" className="btn-outline btn-sm" style={{padding:'8px 16px',display:'inline-flex',alignItems:'center',gap:6}}>📄 PDF Sheet</a>
+          <button
+            onClick={toggleContract}
+            style={{padding:'8px 16px',borderRadius:8,border:'none',cursor:'pointer',fontWeight:600,fontSize:'0.82rem',
+              transition:'all 0.3s',
+              background: contractSigned ? 'rgba(76,175,80,0.15)' : 'rgba(255,152,0,0.12)',
+              color: contractSigned ? '#66bb6a' : '#ffb74d',
+            }}
+          >
+            {contractSigned ? '📝 Ugovor Potpisan' : '⚠️ Bez Ugovora'}
+          </button>
           <button className={`publish-toggle ${property.published?'published':'unpublished'}`} onClick={togglePublish}
             style={{padding:'8px 16px'}}>{property.published ? '✓ Objavljeno na Sajtu' : 'Objavi na Sajt'}</button>
           <button className="btn-danger btn-sm" onClick={handleDelete}>🗑 Obriši</button>
@@ -203,6 +239,52 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
             {property.terrace && <div className="detail-row"><span className="detail-label">Terasa</span><span className="detail-value">{property.terrace}</span></div>}
             {property.heating && <div className="detail-row"><span className="detail-label">Grejanje</span><span className="detail-value">{property.heating}</span></div>}
             {property.description && <div style={{marginTop:16}}><div className="detail-label" style={{marginBottom:8}}>Opis</div><p style={{fontSize:'0.88rem',lineHeight:1.6,color:'var(--gray-200)'}}>{property.description}</p></div>}
+          </div>
+
+          {/* Contract & Katastar Card */}
+          <div className="detail-card" style={{marginBottom:20}}>
+            <div className="detail-card-title">📋 Ugovor & Katastar</div>
+            {/* Contract Status */}
+            <div className="detail-row" style={{alignItems:'center'}}>
+              <span className="detail-label">Ugovor o posredovanju</span>
+              <button
+                onClick={toggleContract}
+                style={{padding:'6px 14px',borderRadius:8,border:'none',cursor:'pointer',fontWeight:600,fontSize:'0.82rem',
+                  transition:'all 0.3s',
+                  background: contractSigned ? 'rgba(76,175,80,0.15)' : 'rgba(255,152,0,0.12)',
+                  color: contractSigned ? '#66bb6a' : '#ffb74d',
+                }}
+              >
+                {contractSigned ? '✓ Potpisan' : '✕ Nije Potpisan'}
+              </button>
+            </div>
+            <div style={{padding:'8px 0 4px',fontSize:'0.75rem',color:'var(--gray-300)'}}>
+              {contractSigned
+                ? '✅ Može se javno oglašavati'
+                : '⚠️ Samo interna ponuda — ne može se javno oglašavati dok se ugovor ne potpiše'
+              }
+            </div>
+
+            {/* Katastar Notes */}
+            <div style={{borderTop:'1px solid rgba(212,175,55,0.08)',marginTop:16,paddingTop:16}}>
+              <div className="detail-label" style={{marginBottom:8}}>🏛️ Katastar Napomene</div>
+              <textarea
+                className="form-textarea"
+                value={cadastralNotes}
+                onChange={e => setCadastralNotes(e.target.value)}
+                placeholder="Upiši stanje u katastru... npr. 'Čist katastar, nema tereta' ili 'Postoji hipoteka — čeka se brisanje' ili 'Uknjižen 1/1 na vlasnika'"
+                style={{minHeight:80,marginBottom:10}}
+              />
+              <button
+                type="button"
+                className="btn-gold btn-sm"
+                onClick={saveCadastralNotes}
+                disabled={savingCadastral}
+                style={{opacity: savingCadastral ? 0.6 : 1}}
+              >
+                {savingCadastral ? 'Čuvanje...' : '💾 Sačuvaj Katastar'}
+              </button>
+            </div>
           </div>
 
           {/* Property Notes Timeline */}
