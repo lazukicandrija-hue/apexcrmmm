@@ -66,6 +66,15 @@ export async function GET() {
     SELECT SUM(price) as total FROM properties WHERE price >= 1000 AND status = 'Aktivna'
   `).get() as { total: number };
 
+  // Stale properties (active 30+ days)
+  const staleProperties = db.prepare(`
+    SELECT p.id, p.title, p.location, p.price, p.type, p.created_at,
+           julianday('now') - julianday(p.created_at) as days_active
+    FROM properties p
+    WHERE p.status = 'Aktivna' AND julianday('now') - julianday(p.created_at) >= 30
+    ORDER BY days_active DESC
+  `).all() as { id: string; title: string; location: string; price: number; type: string; created_at: string; days_active: number }[];
+
   return NextResponse.json({
     byType,
     byStatus,
@@ -75,5 +84,6 @@ export async function GET() {
     buyerPipeline,
     topLocations,
     totalValue: totalValue?.total || 0,
+    staleProperties,
   });
 }

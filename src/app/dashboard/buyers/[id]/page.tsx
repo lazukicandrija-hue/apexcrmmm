@@ -9,6 +9,7 @@ interface Buyer {
   next_action_date:string; status:string; created_at:string;
 }
 interface NoteEntry { id:string; content:string; created_at:string; }
+interface PropertyMatch { property:{id:string;title:string;location:string;price:number;type:string;area:number;rooms:number;}; score:number; reasons:string[]; }
 
 export default function BuyerDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -19,6 +20,7 @@ export default function BuyerDetailPage({ params }: { params: Promise<{ id: stri
   const [toast, setToast] = useState<{msg:string;type:string}|null>(null);
   const [nextActionDate, setNextActionDate] = useState('');
   const [status, setStatus] = useState('');
+  const [propertyMatches, setPropertyMatches] = useState<PropertyMatch[]>([]);
 
   const load = () => {
     fetch(`/api/buyers/${id}`).then(r=>r.json()).then(d=>{
@@ -28,6 +30,7 @@ export default function BuyerDetailPage({ params }: { params: Promise<{ id: stri
         setStatus(d.buyer.status || 'Aktivan');
         // Load notes history
         fetch(`/api/notes?entity_type=buyer&entity_id=${d.buyer.id}`).then(r=>r.json()).then(n=>setBuyerNotes(n.notes||[]));
+        fetch(`/api/buyers/${id}/matches`).then(r=>r.json()).then(m=>setPropertyMatches(m.matches||[]));
       }
     });
   };
@@ -154,6 +157,27 @@ export default function BuyerDetailPage({ params }: { params: Promise<{ id: stri
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Property Matching */}
+      <div className="detail-card" style={{marginTop:24}}>
+        <div className="detail-card-title">🏠 Odgovarajuće Nekretnine ({propertyMatches.length})</div>
+        {propertyMatches.length > 0 ? (
+          <div style={{display:'flex',flexDirection:'column',gap:8}}>
+            {propertyMatches.map(m => (
+              <a key={m.property.id} href={`/dashboard/properties/${m.property.id}`}
+                style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'10px 12px',background:'rgba(212,175,55,0.04)',borderRadius:8,border:'1px solid rgba(212,175,55,0.1)',color:'#fff',textDecoration:'none',transition:'background 0.2s'}}
+                onMouseEnter={e=>(e.currentTarget.style.background='rgba(212,175,55,0.1)')} onMouseLeave={e=>(e.currentTarget.style.background='rgba(212,175,55,0.04)')}>
+                <div>
+                  <div style={{fontWeight:500,fontSize:'0.9rem'}}>{m.property.title}</div>
+                  <div style={{fontSize:'0.75rem',color:'var(--gray-300)',marginTop:2}}>{m.property.location} — €{m.property.price?.toLocaleString('sr-RS')} {m.property.area ? `— ${m.property.area}m²` : ''}</div>
+                  <div style={{fontSize:'0.72rem',color:'var(--gold)',marginTop:2}}>{m.reasons.join(' · ')}</div>
+                </div>
+                <div style={{background:'var(--gold)',color:'#000',borderRadius:20,padding:'2px 10px',fontWeight:700,fontSize:'0.78rem'}}>{m.score} poena</div>
+              </a>
+            ))}
+          </div>
+        ) : <p style={{color:'var(--gray-300)',fontSize:'0.85rem'}}>Nema nekretnina koje odgovaraju kriterijumima ovog kupca</p>}
       </div>
     </>
   );

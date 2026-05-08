@@ -15,6 +15,19 @@ export async function GET(request: Request) {
   const search = searchParams.get('search');
   const sort = searchParams.get('sort') || 'created_at';
   const order = searchParams.get('order') || 'DESC';
+  // Advanced filters
+  const minPrice = searchParams.get('minPrice');
+  const maxPrice = searchParams.get('maxPrice');
+  const minRooms = searchParams.get('minRooms');
+  const maxRooms = searchParams.get('maxRooms');
+  const minArea = searchParams.get('minArea');
+  const maxArea = searchParams.get('maxArea');
+  const floor = searchParams.get('floor');
+  const parking = searchParams.get('parking');
+  const heating = searchParams.get('heating');
+  const terrace = searchParams.get('terrace');
+  const condition = searchParams.get('condition');
+  const owner = searchParams.get('owner');
 
   const db = getDb();
   let query = `
@@ -24,13 +37,31 @@ export async function GET(request: Request) {
     LEFT JOIN owners o ON p.owner_id = o.id 
     WHERE 1=1
   `;
-  const params: string[] = [];
+  const params: (string | number)[] = [];
 
   if (type) { query += ` AND p.type = ?`; params.push(type); }
   if (status) { query += ` AND p.status = ?`; params.push(status); }
-  if (search) { query += ` AND (p.title LIKE ? OR p.location LIKE ?)`; params.push(`%${search}%`, `%${search}%`); }
+  if (search) {
+    query += ` AND (p.title LIKE ? OR p.location LIKE ? OR p.description LIKE ? OR (o.first_name || ' ' || o.last_name) LIKE ?)`;
+    params.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
+  }
+  if (minPrice) { query += ` AND p.price >= ?`; params.push(Number(minPrice)); }
+  if (maxPrice) { query += ` AND p.price <= ?`; params.push(Number(maxPrice)); }
+  if (minRooms) { query += ` AND p.rooms >= ?`; params.push(Number(minRooms)); }
+  if (maxRooms) { query += ` AND p.rooms <= ?`; params.push(Number(maxRooms)); }
+  if (minArea) { query += ` AND p.area >= ?`; params.push(Number(minArea)); }
+  if (maxArea) { query += ` AND p.area <= ?`; params.push(Number(maxArea)); }
+  if (floor) { query += ` AND p.floor LIKE ?`; params.push(`%${floor}%`); }
+  if (parking) { query += ` AND p.parking = ?`; params.push(parking); }
+  if (heating) { query += ` AND p.heating = ?`; params.push(heating); }
+  if (terrace) { query += ` AND p.terrace = ?`; params.push(terrace); }
+  if (condition) { query += ` AND p.condition = ?`; params.push(condition); }
+  if (owner) {
+    query += ` AND (o.first_name LIKE ? OR o.last_name LIKE ? OR (o.first_name || ' ' || o.last_name) LIKE ?)`;
+    params.push(`%${owner}%`, `%${owner}%`, `%${owner}%`);
+  }
 
-  const allowedSorts = ['price', 'area', 'created_at', 'title'];
+  const allowedSorts = ['price', 'area', 'created_at', 'title', 'rooms'];
   const sortCol = allowedSorts.includes(sort) ? sort : 'created_at';
   const sortOrder = order === 'ASC' ? 'ASC' : 'DESC';
   query += ` ORDER BY p.${sortCol} ${sortOrder}`;

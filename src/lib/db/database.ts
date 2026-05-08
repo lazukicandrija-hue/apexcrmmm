@@ -98,6 +98,27 @@ function initializeSchema(database: Database.Database) {
       last_used_at TEXT,
       created_at TEXT DEFAULT (datetime('now'))
     );
+
+    CREATE TABLE IF NOT EXISTS property_audit_log (
+      id TEXT PRIMARY KEY,
+      property_id TEXT NOT NULL REFERENCES properties(id) ON DELETE CASCADE,
+      user_id TEXT NOT NULL,
+      user_name TEXT NOT NULL,
+      field_name TEXT NOT NULL,
+      old_value TEXT,
+      new_value TEXT,
+      changed_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS ad_listings (
+      id TEXT PRIMARY KEY,
+      property_id TEXT NOT NULL REFERENCES properties(id) ON DELETE CASCADE,
+      platform TEXT NOT NULL,
+      status TEXT CHECK(status IN ('draft','published','needs_update','removed')) DEFAULT 'draft',
+      external_url TEXT,
+      last_synced_at TEXT,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
   `);
 
   // Migrate: add new property fields (safe to run multiple times)
@@ -111,6 +132,7 @@ function initializeSchema(database: Database.Database) {
   addColumnSafe('properties', 'heating', 'TEXT');
   addColumnSafe('properties', 'cadastral_notes', 'TEXT');
   addColumnSafe('properties', 'contract_signed', 'INTEGER DEFAULT 0');
+  addColumnSafe('properties', 'reminder_text', 'TEXT');
 
   // Seed admin user if no users exist
   const userCount = database.prepare('SELECT COUNT(*) as count FROM users').get() as { count: number };

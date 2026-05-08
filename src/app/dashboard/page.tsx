@@ -11,6 +11,7 @@ interface Analytics {
   buyerPipeline: {status:string;count:number}[];
   topLocations: {location:string;count:number}[];
   totalValue: number;
+  staleProperties: {id:string;title:string;location:string;price:number;days_active:number}[];
 }
 
 const COLORS = ['#D4AF37','#4caf50','#2196f3','#ff6b6b','#ab47bc','#ff9800'];
@@ -58,6 +59,25 @@ export default function DashboardPage() {
 
   return (
     <>
+      {/* Stale Properties Alert (30+ days) */}
+      {analytics?.staleProperties && analytics.staleProperties.length > 0 && (
+        <div style={{marginBottom:24,background:'rgba(255,152,0,0.08)',border:'1px solid rgba(255,152,0,0.2)',borderRadius:12,padding:'16px 20px'}}>
+          <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:10}}>
+            <span style={{fontSize:20}}>⏳</span>
+            <span style={{color:'#ffb74d',fontWeight:600,fontSize:'0.95rem'}}>Dugo na Tržištu — 30+ dana ({analytics.staleProperties.length})</span>
+          </div>
+          <div style={{display:'flex',flexDirection:'column',gap:6}}>
+            {analytics.staleProperties.map(p => (
+              <Link key={p.id} href={`/dashboard/properties/${p.id}`}
+                style={{color:'#fff',fontSize:'0.85rem',display:'flex',justifyContent:'space-between',padding:'6px 10px',background:'rgba(0,0,0,0.15)',borderRadius:6}}>
+                <span>🏠 {p.title} — {p.location}</span>
+                <span style={{color:'#ffb74d',fontWeight:600,fontSize:'0.78rem'}}>{Math.round(p.days_active)} dana</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Reminders Alert */}
       {(totalOverdue > 0 || totalSoon > 0) && (
         <div style={{marginBottom:24,borderRadius:12,overflow:'hidden'}}>

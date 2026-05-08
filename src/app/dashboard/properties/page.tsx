@@ -26,6 +26,8 @@ function PropertiesPageInner() {
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [showModal, setShowModal] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [advFilters, setAdvFilters] = useState({minPrice:'',maxPrice:'',minRooms:'',maxRooms:'',minArea:'',maxArea:'',floor:'',parking:'',heating:'',terrace:'',owner:''});
   const [toast, setToast] = useState<{msg:string;type:string}|null>(null);
   const [form, setForm] = useState({
     title:'',description:'',location:'',price:'',type:category || 'Novogradnja',area:'',rooms:'',
@@ -46,9 +48,11 @@ function PropertiesPageInner() {
     if (search) params.set('search', search);
     if (category) params.set('type', category);
     if (filterStatus) params.set('status', filterStatus);
+    // Advanced filters
+    Object.entries(advFilters).forEach(([k,v]) => { if (v) params.set(k, v); });
     fetch(`/api/properties?${params}`).then(r=>r.json()).then(d=>setProperties(d.properties||[]));
     fetch('/api/owners').then(r=>r.json()).then(d=>setOwners(d.owners||[]));
-  }, [search, category, filterStatus]);
+  }, [search, category, filterStatus, advFilters]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -111,10 +115,27 @@ function PropertiesPageInner() {
               <option value="">Svi statusi</option>
               <option>Aktivna</option><option>Prodato</option><option>U pregovoru</option>
             </select>
+            <button className="btn-outline btn-sm" onClick={()=>setShowAdvanced(!showAdvanced)}>🔍 {showAdvanced?'Sakrij':'Filteri'}</button>
             <a href="/api/export/properties" className="btn-outline btn-sm">📥 CSV</a>
             <button className="btn-gold btn-sm" onClick={()=>setShowModal(true)}>+ Dodaj</button>
           </div>
         </div>
+        {showAdvanced && (
+          <div style={{background:'rgba(212,175,55,0.04)',border:'1px solid rgba(212,175,55,0.1)',borderRadius:12,padding:16,marginBottom:16,display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(170px,1fr))',gap:10}}>
+            <div><label style={{fontSize:'0.72rem',color:'var(--gray-300)',display:'block',marginBottom:4}}>Cena od (€)</label><input className="form-input" type="number" placeholder="Min" value={advFilters.minPrice} onChange={e=>setAdvFilters({...advFilters,minPrice:e.target.value})} style={{padding:'6px 10px',fontSize:'0.82rem'}} /></div>
+            <div><label style={{fontSize:'0.72rem',color:'var(--gray-300)',display:'block',marginBottom:4}}>Cena do (€)</label><input className="form-input" type="number" placeholder="Max" value={advFilters.maxPrice} onChange={e=>setAdvFilters({...advFilters,maxPrice:e.target.value})} style={{padding:'6px 10px',fontSize:'0.82rem'}} /></div>
+            <div><label style={{fontSize:'0.72rem',color:'var(--gray-300)',display:'block',marginBottom:4}}>Sobe od</label><input className="form-input" type="number" placeholder="Min" value={advFilters.minRooms} onChange={e=>setAdvFilters({...advFilters,minRooms:e.target.value})} style={{padding:'6px 10px',fontSize:'0.82rem'}} /></div>
+            <div><label style={{fontSize:'0.72rem',color:'var(--gray-300)',display:'block',marginBottom:4}}>Sobe do</label><input className="form-input" type="number" placeholder="Max" value={advFilters.maxRooms} onChange={e=>setAdvFilters({...advFilters,maxRooms:e.target.value})} style={{padding:'6px 10px',fontSize:'0.82rem'}} /></div>
+            <div><label style={{fontSize:'0.72rem',color:'var(--gray-300)',display:'block',marginBottom:4}}>m² od</label><input className="form-input" type="number" placeholder="Min" value={advFilters.minArea} onChange={e=>setAdvFilters({...advFilters,minArea:e.target.value})} style={{padding:'6px 10px',fontSize:'0.82rem'}} /></div>
+            <div><label style={{fontSize:'0.72rem',color:'var(--gray-300)',display:'block',marginBottom:4}}>m² do</label><input className="form-input" type="number" placeholder="Max" value={advFilters.maxArea} onChange={e=>setAdvFilters({...advFilters,maxArea:e.target.value})} style={{padding:'6px 10px',fontSize:'0.82rem'}} /></div>
+            <div><label style={{fontSize:'0.72rem',color:'var(--gray-300)',display:'block',marginBottom:4}}>Sprat</label><input className="form-input" placeholder="Npr. 3" value={advFilters.floor} onChange={e=>setAdvFilters({...advFilters,floor:e.target.value})} style={{padding:'6px 10px',fontSize:'0.82rem'}} /></div>
+            <div><label style={{fontSize:'0.72rem',color:'var(--gray-300)',display:'block',marginBottom:4}}>Parking</label><select className="form-select" value={advFilters.parking} onChange={e=>setAdvFilters({...advFilters,parking:e.target.value})} style={{padding:'6px 10px',fontSize:'0.82rem'}}><option value="">Svi</option><option>Garaža</option><option>Parking mesto</option><option>Nema</option></select></div>
+            <div><label style={{fontSize:'0.72rem',color:'var(--gray-300)',display:'block',marginBottom:4}}>Grejanje</label><select className="form-select" value={advFilters.heating} onChange={e=>setAdvFilters({...advFilters,heating:e.target.value})} style={{padding:'6px 10px',fontSize:'0.82rem'}}><option value="">Svi</option><option>Centralno</option><option>Etažno</option><option>Gas</option><option>Klima</option></select></div>
+            <div><label style={{fontSize:'0.72rem',color:'var(--gray-300)',display:'block',marginBottom:4}}>Terasa</label><select className="form-select" value={advFilters.terrace} onChange={e=>setAdvFilters({...advFilters,terrace:e.target.value})} style={{padding:'6px 10px',fontSize:'0.82rem'}}><option value="">Svi</option><option>Da</option><option>Nema</option></select></div>
+            <div><label style={{fontSize:'0.72rem',color:'var(--gray-300)',display:'block',marginBottom:4}}>Vlasnik</label><input className="form-input" placeholder="Ime ili prezime" value={advFilters.owner} onChange={e=>setAdvFilters({...advFilters,owner:e.target.value})} style={{padding:'6px 10px',fontSize:'0.82rem'}} /></div>
+            <div style={{display:'flex',alignItems:'flex-end'}}><button className="btn-outline btn-sm" onClick={()=>setAdvFilters({minPrice:'',maxPrice:'',minRooms:'',maxRooms:'',minArea:'',maxArea:'',floor:'',parking:'',heating:'',terrace:'',owner:''})}>✕ Resetuj</button></div>
+          </div>
+        )}
         <div className="table-overflow">
           <table className="data-table">
             <thead>

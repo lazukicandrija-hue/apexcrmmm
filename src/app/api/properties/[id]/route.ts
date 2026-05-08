@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/db/database';
 import { getCurrentUser } from '@/lib/auth';
 import { headers } from 'next/headers';
+import { v4 as uuidv4 } from 'uuid';
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const headersList = await headers();
@@ -30,19 +31,66 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     const body = await request.json();
     const db = getDb();
 
+    // Read old values for audit log
+    const old = db.prepare('SELECT * FROM properties WHERE id = ?').get(id) as Record<string, unknown> | undefined;
+    if (!old) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+
     db.prepare(`
-      UPDATE properties SET title=?, description=?, location=?, price=?, type=?, area=?, rooms=?,
+      UPDATE properties SET title=?, description=?, notes=?, location=?, price=?, type=?, area=?, rooms=?,
       status=?, owner_id=?, images=?, published=?, floor=?, condition=?, parking=?, terrace=?, heating=?,
-      cadastral_notes=?, contract_signed=?,
+      cadastral_notes=?, contract_signed=?, reminder_text=?,
       updated_at=datetime('now') WHERE id=?
     `).run(
-      body.title, body.description || '', body.location, body.price, body.type,
+      body.title, body.description || '', body.notes ?? old.notes ?? '', body.location, body.price, body.type,
       body.area || null, body.rooms || null, body.status || 'Aktivna',
-      body.owner_id, JSON.stringify(body.images || []), body.published ? 1 : 0,
+      body.owner_id, JSON.stringify(body.images || JSON.parse((old.images as string) || '[]')), body.published != null ? (body.published ? 1 : 0) : old.published,
       body.floor || null, body.condition || null, body.parking || null,
       body.terrace || null, body.heating || null,
-      body.cadastral_notes || null, body.contract_signed ? 1 : 0, id
+      body.cadastral_notes ?? old.cadastral_notes ?? null, body.contract_signed != null ? (body.contract_signed ? 1 : 0) : old.contract_signed,
+      body.reminder_text ?? old.reminder_text ?? null, id
     );
+
+    // Audit log: compare fields and log changes
+    const auditFields: { key: string; label: string }[] = [
+      { key: 'title', label: 'Naslov' },
+      { key: 'description', label: 'Opis' },
+      { key: 'notes', label: 'Beleške' },
+      { key: 'location', label: 'Lokacija' },
+      { key: 'price', label: 'Cena' },
+      { key: 'type', label: 'Tip' },
+      { key: 'area', label: 'Površina' },
+      { key: 'rooms', label: 'Broj soba' },
+      { key: 'status', label: 'Status' },
+      { key: 'owner_id', label: 'Vlasnik' },
+      { key: 'floor', label: 'Sprat' },
+      { key: 'condition', label: 'Stanje' },
+      { key: 'parking', label: 'Parking' },
+      { key: 'terrace', label: 'Terasa' },
+      { key: 'heating', label: 'Grejanje' },
+      { key: 'cadastral_notes', label: 'Katastar' },
+      { key: 'contract_signed', label: 'Ugovor potpisan' },
+      { key: 'reminder_text', label: 'Podsetnik' },
+    ];
+
+    const insertAudit = db.prepare(
+      'INSERT INTO property_audit_log (id, property_id, user_id, user_name, field_name, old_value, new_value) VALUES (?, ?, ?, ?, ?, ?, ?)'
+    );
+
+    for (const f of auditFields) {
+      const oldVal = String(old[f.key] ?? '');
+      let newVal: string;
+      if (f.key === 'contract_signed') {
+        newVal = String(body.contract_signed != null ? (body.contract_signed ? 1 : 0) : old.contract_signed);
+      } else {
+        newVal = String(body[f.key] ?? old[f.key] ?? '');
+      }
+      if (oldVal !== newVal) {
+        insertAudit.run(
+          uuidv4(), id, (user as { id: string }).id, (user as { full_name: string }).full_name,
+          f.label, oldVal || '(prazno)', newVal || '(prazno)'
+        );
+      }
+    }
 
     return NextResponse.json({ message: 'Nekretnina ažurirana' });
   } catch (error) {
