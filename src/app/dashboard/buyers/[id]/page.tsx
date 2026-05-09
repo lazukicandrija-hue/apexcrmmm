@@ -21,6 +21,10 @@ export default function BuyerDetailPage({ params }: { params: Promise<{ id: stri
   const [nextActionDate, setNextActionDate] = useState('');
   const [status, setStatus] = useState('');
   const [propertyMatches, setPropertyMatches] = useState<PropertyMatch[]>([]);
+  // Edit mode
+  const [editMode, setEditMode] = useState(false);
+  const [editForm, setEditForm] = useState<Record<string,string|number>>({});
+  const [saving, setSaving] = useState(false);
 
   const load = () => {
     fetch(`/api/buyers/${id}`).then(r=>r.json()).then(d=>{
@@ -38,6 +42,23 @@ export default function BuyerDetailPage({ params }: { params: Promise<{ id: stri
   useEffect(load, [id]);
 
   const showToast = (msg:string, type='success') => { setToast({msg,type}); setTimeout(()=>setToast(null), 3000); };
+
+  const enterEdit = () => {
+    if (!buyer) return;
+    setEditForm({first_name:buyer.first_name,last_name:buyer.last_name,phone:buyer.phone||'',email:buyer.email||'',desired_type:buyer.desired_type||'',location:buyer.location||'',budget:buyer.budget||0,notes:buyer.notes||''});
+    setEditMode(true);
+  };
+  const cancelEdit = () => setEditMode(false);
+  const saveEdit = async () => {
+    setSaving(true);
+    const res = await fetch(`/api/buyers/${id}`, {
+      method:'PUT', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({...editForm, budget:Number(editForm.budget)||null, next_action_date:nextActionDate||null, status})
+    });
+    if (res.ok) { showToast('Kupac ažuriran ✓'); setEditMode(false); load(); }
+    else { const d = await res.json(); showToast(d.error||'Greška','error'); }
+    setSaving(false);
+  };
 
   const addNote = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -100,7 +121,15 @@ export default function BuyerDetailPage({ params }: { params: Promise<{ id: stri
           <h2 style={{margin:0,fontSize:'1.5rem'}}>{buyer.first_name} {buyer.last_name}</h2>
           <p style={{color:'var(--gray-300)',margin:'4px 0 0'}}>{buyer.desired_type ? `Traži: ${buyer.desired_type}` : 'Kupac'}</p>
         </div>
-        <button className="btn-danger btn-sm" onClick={handleDelete}>🗑 Obriši</button>
+        <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
+          {editMode ? (<>
+            <button className="btn-gold btn-sm" onClick={saveEdit} disabled={saving} style={{padding:'8px 16px'}}>{saving?'Čuvam...':'💾 Sačuvaj Sve'}</button>
+            <button className="btn-outline btn-sm" onClick={cancelEdit} style={{padding:'8px 16px'}}>✕ Otkaži</button>
+          </>) : (
+            <button className="btn-outline btn-sm" onClick={enterEdit} style={{padding:'8px 16px'}}>✏️ Izmeni</button>
+          )}
+          <button className="btn-danger btn-sm" onClick={handleDelete}>🗑 Obriši</button>
+        </div>
       </div>
 
       <div className="detail-grid">
@@ -108,11 +137,28 @@ export default function BuyerDetailPage({ params }: { params: Promise<{ id: stri
         <div>
           <div className="detail-card" style={{marginBottom:20}}>
             <div className="detail-card-title">Informacije o Kupcu</div>
-            <div className="detail-row"><span className="detail-label">Telefon</span><span className="detail-value"><a href={`tel:${buyer.phone}`} style={{color:'var(--gold)'}}>{buyer.phone}</a></span></div>
-            <div className="detail-row"><span className="detail-label">Email</span><span className="detail-value"><a href={`mailto:${buyer.email}`} style={{color:'var(--gold)'}}>{buyer.email}</a></span></div>
-            <div className="detail-row"><span className="detail-label">Traži</span><span className="detail-value">{buyer.desired_type||'-'}</span></div>
-            <div className="detail-row"><span className="detail-label">Lokacija</span><span className="detail-value">{buyer.location||'-'}</span></div>
-            <div className="detail-row"><span className="detail-label">Budžet</span><span className="detail-value" style={{color:'var(--gold)'}}>€{buyer.budget?.toLocaleString('sr-RS')||'-'}</span></div>
+            {editMode ? (<>
+              <div className="form-row">
+                <div className="form-group"><label>Ime</label><input className="form-input" value={editForm.first_name||''} onChange={e=>setEditForm({...editForm,first_name:e.target.value})} /></div>
+                <div className="form-group"><label>Prezime</label><input className="form-input" value={editForm.last_name||''} onChange={e=>setEditForm({...editForm,last_name:e.target.value})} /></div>
+              </div>
+              <div className="form-row">
+                <div className="form-group"><label>Telefon</label><input className="form-input" value={editForm.phone||''} onChange={e=>setEditForm({...editForm,phone:e.target.value})} /></div>
+                <div className="form-group"><label>Email</label><input className="form-input" value={editForm.email||''} onChange={e=>setEditForm({...editForm,email:e.target.value})} /></div>
+              </div>
+              <div className="form-row">
+                <div className="form-group"><label>Traži tip</label><select className="form-select" value={editForm.desired_type||''} onChange={e=>setEditForm({...editForm,desired_type:e.target.value})}><option value="">-</option><option>Novogradnja</option><option>Starogradnja</option><option>Lokali</option><option>Rente</option></select></div>
+                <div className="form-group"><label>Lokacija</label><input className="form-input" value={editForm.location||''} onChange={e=>setEditForm({...editForm,location:e.target.value})} placeholder="Npr. Novi Sad" /></div>
+              </div>
+              <div className="form-group" style={{marginBottom:12}}><label>Budžet (€)</label><input className="form-input" type="number" value={editForm.budget||''} onChange={e=>setEditForm({...editForm,budget:e.target.value})} /></div>
+              <div className="form-group"><label>Napomene</label><textarea className="form-textarea" value={editForm.notes as string||''} onChange={e=>setEditForm({...editForm,notes:e.target.value})} style={{minHeight:80}} /></div>
+            </>) : (<>
+              <div className="detail-row"><span className="detail-label">Telefon</span><span className="detail-value"><a href={`tel:${buyer.phone}`} style={{color:'var(--gold)'}}>{buyer.phone}</a></span></div>
+              <div className="detail-row"><span className="detail-label">Email</span><span className="detail-value"><a href={`mailto:${buyer.email}`} style={{color:'var(--gold)'}}>{buyer.email}</a></span></div>
+              <div className="detail-row"><span className="detail-label">Traži</span><span className="detail-value">{buyer.desired_type||'-'}</span></div>
+              <div className="detail-row"><span className="detail-label">Lokacija</span><span className="detail-value">{buyer.location||'-'}</span></div>
+              <div className="detail-row"><span className="detail-label">Budžet</span><span className="detail-value" style={{color:'var(--gold)'}}>€{buyer.budget?.toLocaleString('sr-RS')||'-'}</span></div>
+            </>)}
             <div className="detail-row">
               <span className="detail-label">Status</span>
               <select className="filter-select" value={status} onChange={e=>saveStatus(e.target.value)}
@@ -131,7 +177,7 @@ export default function BuyerDetailPage({ params }: { params: Promise<{ id: stri
               </div>
             </div>
             <div className="detail-row"><span className="detail-label">Dodat</span><span className="detail-value">{new Date(buyer.created_at).toLocaleDateString('sr-RS')}</span></div>
-            {buyer.notes && <div style={{marginTop:12}}><div className="detail-label" style={{marginBottom:6}}>Inicijalne napomene</div><p style={{fontSize:'0.82rem',color:'var(--gray-200)',background:'rgba(212,175,55,0.05)',padding:10,borderRadius:8,lineHeight:1.5}}>{buyer.notes}</p></div>}
+            {!editMode && buyer.notes && <div style={{marginTop:12}}><div className="detail-label" style={{marginBottom:6}}>Inicijalne napomene</div><p style={{fontSize:'0.82rem',color:'var(--gray-200)',background:'rgba(212,175,55,0.05)',padding:10,borderRadius:8,lineHeight:1.5}}>{buyer.notes}</p></div>}
           </div>
         </div>
 
