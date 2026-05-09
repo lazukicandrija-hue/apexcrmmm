@@ -44,11 +44,15 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     // Full update
     db.prepare(`
       UPDATE buyers SET first_name=?, last_name=?, phone=?, email=?, desired_type=?,
-      location=?, budget=?, notes=?, next_action_date=?, status=? WHERE id=?
+      location=?, budget=?, notes=?, next_action_date=?, status=?,
+      financing=?, desired_rooms=?, preferred_locations=? WHERE id=?
     `).run(
       body.first_name, body.last_name, body.phone || '', body.email || '',
       body.desired_type || '', body.location || '', body.budget || null,
-      body.notes || '', body.next_action_date || null, body.status || 'Aktivan', id
+      body.notes || '', body.next_action_date || null, body.status || 'Aktivan',
+      body.financing || '', body.desired_rooms || '',
+      body.preferred_locations ? (typeof body.preferred_locations === 'string' ? body.preferred_locations : JSON.stringify(body.preferred_locations)) : '',
+      id
     );
     return NextResponse.json({ message: 'Kupac ažuriran' });
   } catch (error) {

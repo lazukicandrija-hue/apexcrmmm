@@ -41,12 +41,14 @@ export async function POST(request: Request) {
     const id = uuidv4();
 
     db.prepare(`
-      INSERT INTO buyers (id, first_name, last_name, phone, email, desired_type, location, budget, notes, next_action_date, status)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO buyers (id, first_name, last_name, phone, email, desired_type, location, budget, notes, next_action_date, status, financing, desired_rooms, preferred_locations)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       id, body.first_name, body.last_name, body.phone || '', body.email || '',
       body.desired_type || '', body.location || '', body.budget || null,
-      body.notes || '', body.next_action_date || null, body.status || 'Novo'
+      body.notes || '', body.next_action_date || null, body.status || 'Novo',
+      body.financing || '', body.desired_rooms || '',
+      body.preferred_locations ? JSON.stringify(body.preferred_locations) : ''
     );
 
     if (body.notes) {

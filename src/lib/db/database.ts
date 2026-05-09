@@ -153,6 +153,11 @@ function initializeSchema(database: Database.Database) {
   addColumnSafe('properties', 'contract_signed', 'INTEGER DEFAULT 0');
   addColumnSafe('properties', 'reminder_text', 'TEXT');
 
+  // Migrate: add new buyer fields
+  addColumnSafe('buyers', 'financing', 'TEXT');         // Keš, Kredit, Kombinovano
+  addColumnSafe('buyers', 'desired_rooms', 'TEXT');     // 1, 2, 3, 4+
+  addColumnSafe('buyers', 'preferred_locations', 'TEXT'); // JSON array of Novi Sad neighborhoods
+
   // Seed admin user and default agent if no users exist (first run only)
   const userCount = database.prepare('SELECT COUNT(*) as count FROM users').get() as { count: number };
   if (userCount.count === 0) {

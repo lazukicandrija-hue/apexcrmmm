@@ -7,9 +7,17 @@ interface Buyer {
   id:string; first_name:string; last_name:string; phone:string; email:string;
   desired_type:string; location:string; budget:number; notes:string;
   next_action_date:string; status:string; created_at:string;
+  financing:string; desired_rooms:string; preferred_locations:string;
 }
 interface NoteEntry { id:string; content:string; created_at:string; }
 interface PropertyMatch { property:{id:string;title:string;location:string;price:number;type:string;area:number;rooms:number;}; score:number; reasons:string[]; }
+
+const NOVI_SAD_LOKACIJE = [
+  'Centar','Liman I','Liman II','Liman III','Liman IV','Grbavica','Novo Naselje',
+  'Telep','Detelinara','Podbara','Rotkvarija','Sajmište','Salajka','Petrovaradin',
+  'Sremska Kamenica','Adamovićevo Naselje','Satelit','Klisa','Veternik','Futog',
+  'Adice','Avijatičarsko Naselje','Vidovdansko Naselje','Bistrica','Banatic',
+];
 
 export default function BuyerDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -24,6 +32,7 @@ export default function BuyerDetailPage({ params }: { params: Promise<{ id: stri
   // Edit mode
   const [editMode, setEditMode] = useState(false);
   const [editForm, setEditForm] = useState<Record<string,string|number>>({});
+  const [editLocations, setEditLocations] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
 
   const load = () => {
@@ -45,7 +54,8 @@ export default function BuyerDetailPage({ params }: { params: Promise<{ id: stri
 
   const enterEdit = () => {
     if (!buyer) return;
-    setEditForm({first_name:buyer.first_name,last_name:buyer.last_name,phone:buyer.phone||'',email:buyer.email||'',desired_type:buyer.desired_type||'',location:buyer.location||'',budget:buyer.budget||0,notes:buyer.notes||''});
+    setEditForm({first_name:buyer.first_name,last_name:buyer.last_name,phone:buyer.phone||'',email:buyer.email||'',desired_type:buyer.desired_type||'',location:buyer.location||'',budget:buyer.budget||0,notes:buyer.notes||'',financing:buyer.financing||'',desired_rooms:buyer.desired_rooms||''});
+    try { setEditLocations(JSON.parse(buyer.preferred_locations||'[]')); } catch { setEditLocations([]); }
     setEditMode(true);
   };
   const cancelEdit = () => setEditMode(false);
@@ -53,7 +63,7 @@ export default function BuyerDetailPage({ params }: { params: Promise<{ id: stri
     setSaving(true);
     const res = await fetch(`/api/buyers/${id}`, {
       method:'PUT', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({...editForm, budget:Number(editForm.budget)||null, next_action_date:nextActionDate||null, status})
+      body: JSON.stringify({...editForm, budget:Number(editForm.budget)||null, next_action_date:nextActionDate||null, status, preferred_locations:JSON.stringify(editLocations)})
     });
     if (res.ok) { showToast('Kupac ažuriran ✓'); setEditMode(false); load(); }
     else { const d = await res.json(); showToast(d.error||'Greška','error'); }
@@ -148,16 +158,46 @@ export default function BuyerDetailPage({ params }: { params: Promise<{ id: stri
               </div>
               <div className="form-row">
                 <div className="form-group"><label>Traži tip</label><select className="form-select" value={editForm.desired_type||''} onChange={e=>setEditForm({...editForm,desired_type:e.target.value})}><option value="">-</option><option>Novogradnja</option><option>Starogradnja</option><option>Lokali</option><option>Rente</option></select></div>
-                <div className="form-group"><label>Lokacija</label><input className="form-input" value={editForm.location||''} onChange={e=>setEditForm({...editForm,location:e.target.value})} placeholder="Npr. Novi Sad" /></div>
+                <div className="form-group"><label>Željena Sobnost</label><select className="form-select" value={editForm.desired_rooms||''} onChange={e=>setEditForm({...editForm,desired_rooms:e.target.value})}><option value="">-</option><option>Garsonjera</option><option>Jednosoban</option><option>Jednoiposoban</option><option>Dvosoban</option><option>Dvoiposoban</option><option>Trosoban</option><option>Troiposoban</option><option>Četvorosoban</option><option>4+</option></select></div>
               </div>
-              <div className="form-group" style={{marginBottom:12}}><label>Budžet (€)</label><input className="form-input" type="number" value={editForm.budget||''} onChange={e=>setEditForm({...editForm,budget:e.target.value})} /></div>
+              <div className="form-row">
+                <div className="form-group"><label>Način Finansiranja</label><select className="form-select" value={editForm.financing||''} onChange={e=>setEditForm({...editForm,financing:e.target.value})}><option value="">-</option><option>Keš</option><option>Kredit</option><option>Kombinovano</option></select></div>
+                <div className="form-group"><label>Budžet (€)</label><input className="form-input" type="number" value={editForm.budget||''} onChange={e=>setEditForm({...editForm,budget:e.target.value})} /></div>
+              </div>
+              <div className="form-group"><label>Lokacija (tekst)</label><input className="form-input" value={editForm.location||''} onChange={e=>setEditForm({...editForm,location:e.target.value})} placeholder="Npr. Novi Sad" /></div>
+              <div className="form-group">
+                <label>Željene Lokacije (delovi grada)</label>
+                <div style={{display:'flex',flexWrap:'wrap',gap:6,marginTop:6,maxHeight:140,overflowY:'auto',padding:8,background:'rgba(255,255,255,0.03)',borderRadius:8,border:'1px solid rgba(212,175,55,0.1)'}}>
+                  {NOVI_SAD_LOKACIJE.map(loc=>(
+                    <label key={loc} style={{display:'flex',alignItems:'center',gap:4,fontSize:'0.78rem',padding:'4px 10px',borderRadius:16,cursor:'pointer',userSelect:'none',
+                      background:editLocations.includes(loc)?'rgba(212,175,55,0.2)':'rgba(255,255,255,0.04)',
+                      border:`1px solid ${editLocations.includes(loc)?'rgba(212,175,55,0.4)':'rgba(255,255,255,0.08)'}`,
+                      color:editLocations.includes(loc)?'var(--gold)':'var(--gray-300)',transition:'all 0.15s'}}>
+                      <input type="checkbox" checked={editLocations.includes(loc)} onChange={e=>{
+                        setEditLocations(e.target.checked ? [...editLocations, loc] : editLocations.filter(l=>l!==loc));
+                      }} style={{display:'none'}} />
+                      {editLocations.includes(loc)?'✓ ':''}{loc}
+                    </label>
+                  ))}
+                </div>
+              </div>
               <div className="form-group"><label>Napomene</label><textarea className="form-textarea" value={editForm.notes as string||''} onChange={e=>setEditForm({...editForm,notes:e.target.value})} style={{minHeight:80}} /></div>
             </>) : (<>
               <div className="detail-row"><span className="detail-label">Telefon</span><span className="detail-value"><a href={`tel:${buyer.phone}`} style={{color:'var(--gold)'}}>{buyer.phone}</a></span></div>
               <div className="detail-row"><span className="detail-label">Email</span><span className="detail-value"><a href={`mailto:${buyer.email}`} style={{color:'var(--gold)'}}>{buyer.email}</a></span></div>
               <div className="detail-row"><span className="detail-label">Traži</span><span className="detail-value">{buyer.desired_type||'-'}</span></div>
+              <div className="detail-row"><span className="detail-label">Željena Sobnost</span><span className="detail-value">{buyer.desired_rooms||'-'}</span></div>
+              <div className="detail-row"><span className="detail-label">Finansiranje</span><span className="detail-value"><span style={{padding:'3px 10px',borderRadius:6,fontSize:'0.82rem',background:buyer.financing==='Keš'?'rgba(76,175,80,0.12)':buyer.financing==='Kredit'?'rgba(33,150,243,0.12)':buyer.financing==='Kombinovano'?'rgba(255,152,0,0.12)':'transparent',color:buyer.financing==='Keš'?'#66bb6a':buyer.financing==='Kredit'?'#64b5f6':buyer.financing==='Kombinovano'?'#ffb74d':'var(--gray-300)'}}>{buyer.financing||'-'}</span></span></div>
               <div className="detail-row"><span className="detail-label">Lokacija</span><span className="detail-value">{buyer.location||'-'}</span></div>
               <div className="detail-row"><span className="detail-label">Budžet</span><span className="detail-value" style={{color:'var(--gold)'}}>€{buyer.budget?.toLocaleString('sr-RS')||'-'}</span></div>
+              {buyer.preferred_locations && (() => { try { const locs = JSON.parse(buyer.preferred_locations); return locs.length > 0 ? (
+                <div style={{marginTop:10}}>
+                  <div className="detail-label" style={{marginBottom:6}}>Željene Lokacije</div>
+                  <div style={{display:'flex',flexWrap:'wrap',gap:4}}>
+                    {locs.map((l:string)=>(<span key={l} style={{fontSize:'0.75rem',padding:'3px 10px',borderRadius:16,background:'rgba(212,175,55,0.1)',border:'1px solid rgba(212,175,55,0.2)',color:'var(--gold)'}}>{l}</span>))}
+                  </div>
+                </div>
+              ) : null; } catch { return null; } })()}
             </>)}
             <div className="detail-row">
               <span className="detail-label">Status</span>
