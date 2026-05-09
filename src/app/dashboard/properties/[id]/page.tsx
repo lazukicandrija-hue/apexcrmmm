@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 interface Property {
-  id:string; title:string; description:string; notes:string; location:string; price:number; type:string;
+  id:string; code:string; title:string; description:string; notes:string; location:string; price:number; type:string;
   area:number; rooms:number; status:string; published:number; images:string; next_action_date:string;
   owner_first_name:string; owner_last_name:string; owner_phone:string; owner_email:string; owner_notes:string;
   owner_id:string; created_at:string; updated_at:string;
@@ -277,7 +277,10 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
 
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:24,flexWrap:'wrap',gap:12}}>
         <div>
-          <h2 style={{margin:0,fontSize:'1.5rem'}}>{property.title}</h2>
+          <h2 style={{margin:0,fontSize:'1.5rem'}}>
+            <span style={{color:'var(--gold)',fontFamily:'monospace',fontWeight:700,fontSize:'1rem',marginRight:10,background:'rgba(212,175,55,0.1)',padding:'2px 8px',borderRadius:6}}>{property.code}</span>
+            {property.title}
+          </h2>
           <p style={{color:'var(--gray-300)',margin:'4px 0 0'}}>{property.location}</p>
         </div>
         <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>

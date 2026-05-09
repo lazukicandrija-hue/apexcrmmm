@@ -38,10 +38,68 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     const existing = db.prepare('SELECT * FROM properties WHERE id = ?').get(id) as Record<string, unknown> | undefined;
     if (!existing) return NextResponse.json({ error: 'Nekretnina nije pronađena' }, { status: 404 });
 
+    // ── Validate fields that are provided ──
+    const errors: string[] = [];
+
+    if (body.title !== undefined) {
+      if (typeof body.title !== 'string' || body.title.trim().length === 0) {
+        errors.push('title: mora biti neprazan string');
+      } else if (/^\d{6,}$/.test(body.title.trim())) {
+        errors.push('title: izgleda kao broj telefona — naslov treba da bude naziv nekretnine');
+      }
+    }
+
+    if (body.location !== undefined && (typeof body.location !== 'string' || body.location.trim().length === 0)) {
+      errors.push('location: mora biti neprazan string');
+    }
+
+    if (body.type !== undefined && !['Novogradnja', 'Starogradnja', 'Rente', 'Lokali'].includes(body.type)) {
+      errors.push(`type: "${body.type}" nije validan — mora biti: Novogradnja, Starogradnja, Rente, Lokali`);
+    }
+
+    if (body.status !== undefined && !['Aktivna', 'Prodato', 'U pregovoru'].includes(body.status)) {
+      errors.push(`status: "${body.status}" nije validan — mora biti: Aktivna, Prodato, U pregovoru`);
+    }
+
+    if (body.price !== undefined && body.price !== null) {
+      const priceNum = Number(body.price);
+      if (isNaN(priceNum) || priceNum < 0) {
+        errors.push(`price: "${body.price}" nije validan broj`);
+      }
+    }
+
+    if (body.area !== undefined && body.area !== null && body.area !== '') {
+      const areaNum = Number(body.area);
+      if (isNaN(areaNum) || areaNum < 0) {
+        errors.push(`area: "${body.area}" nije validan broj`);
+      }
+    }
+
+    if (body.rooms !== undefined && body.rooms !== null && body.rooms !== '') {
+      const roomsNum = Number(body.rooms);
+      if (isNaN(roomsNum) || roomsNum < 0) {
+        errors.push(`rooms: "${body.rooms}" nije validan broj`);
+      }
+    }
+
+    if (body.owner_id !== undefined) {
+      const ownerExists = db.prepare('SELECT id FROM owners WHERE id = ?').get(body.owner_id);
+      if (!ownerExists) {
+        errors.push(`owner_id: vlasnik "${body.owner_id}" ne postoji`);
+      }
+    }
+
+    if (errors.length > 0) {
+      return NextResponse.json({
+        error: 'Validacija nije prošla',
+        validation_errors: errors,
+      }, { status: 400 });
+    }
+
     const updated = {
-      title: body.title ?? existing.title,
+      title: body.title !== undefined ? body.title.trim() : existing.title,
       description: body.description ?? existing.description,
-      location: body.location ?? existing.location,
+      location: body.location !== undefined ? body.location.trim() : existing.location,
       price: body.price != null ? Number(body.price) : existing.price,
       type: body.type ?? existing.type,
       area: body.area != null && body.area !== '' ? Number(body.area) : existing.area,
@@ -58,12 +116,14 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       street: body.street ?? existing.street,
       building_number: body.building_number ?? existing.building_number,
       apartment_number: body.apartment_number ?? existing.apartment_number,
+      cadastral_notes: body.cadastral_notes ?? existing.cadastral_notes,
+      contract_signed: body.contract_signed !== undefined ? (body.contract_signed ? 1 : 0) : existing.contract_signed,
     };
 
     db.prepare(`
       UPDATE properties SET title=?, description=?, location=?, price=?, type=?, area=?, rooms=?,
       status=?, owner_id=?, images=?, published=?, floor=?, condition=?, parking=?, terrace=?, heating=?,
-      street=?, building_number=?, apartment_number=?,
+      street=?, building_number=?, apartment_number=?, cadastral_notes=?, contract_signed=?,
       updated_at=datetime('now') WHERE id=?
     `).run(
       updated.title, updated.description, updated.location, updated.price, updated.type,
@@ -71,6 +131,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       updated.published, updated.floor, updated.condition, updated.parking,
       updated.terrace, updated.heating,
       updated.street, updated.building_number, updated.apartment_number,
+      updated.cadastral_notes, updated.contract_signed,
       id
     );
 

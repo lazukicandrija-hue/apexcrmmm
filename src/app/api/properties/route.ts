@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getDb } from '@/lib/db/database';
+import { getDb, generatePropertyCode } from '@/lib/db/database';
 import { getCurrentUser } from '@/lib/auth';
 import { headers } from 'next/headers';
 import { v4 as uuidv4 } from 'uuid';
@@ -86,20 +86,24 @@ export async function POST(request: Request) {
     const area = body.area != null && body.area !== '' ? Number(body.area) : null;
     const rooms = body.rooms != null && body.rooms !== '' ? Number(body.rooms) : null;
 
+    // Auto-generate property code
+    const code = generatePropertyCode(db, body.type);
+
     db.prepare(`
-      INSERT INTO properties (id, title, description, location, price, type, area, rooms, status, owner_id, images, published, floor, condition, parking, terrace, heating, cadastral_notes, contract_signed, street, building_number, apartment_number)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO properties (id, code, title, description, location, price, type, area, rooms, status, owner_id, images, published, floor, condition, parking, terrace, heating, cadastral_notes, contract_signed, street, building_number, apartment_number, project_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
-      id, body.title, body.description || '', body.location, price, body.type,
+      id, code, body.title, body.description || '', body.location, price, body.type,
       area, rooms, body.status || 'Aktivna',
       body.owner_id, JSON.stringify(body.images || []), body.published ? 1 : 0,
       body.floor || null, body.condition || null, body.parking || null,
       body.terrace || null, body.heating || null,
       body.cadastral_notes || null, body.contract_signed ? 1 : 0,
-      body.street || null, body.building_number || null, body.apartment_number || null
+      body.street || null, body.building_number || null, body.apartment_number || null,
+      body.project_id || null
     );
 
-    return NextResponse.json({ id, message: 'Nekretnina kreirana' }, { status: 201 });
+    return NextResponse.json({ id, code, message: 'Nekretnina kreirana' }, { status: 201 });
   } catch (error) {
     console.error(error);
     return NextResponse.json({ error: 'Greška pri kreiranju' }, { status: 500 });

@@ -4,11 +4,12 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
 interface Property {
-  id:string; title:string; location:string; price:number; type:string; area:number;
+  id:string; code:string; title:string; location:string; price:number; type:string; area:number;
   rooms:number; status:string; published:number; owner_first_name:string; owner_last_name:string;
-  owner_phone:string; created_at:string; contract_signed:number;
+  owner_phone:string; created_at:string; contract_signed:number; project_id:string|null;
 }
 interface Owner { id:string; first_name:string; last_name:string; phone:string; email:string; }
+interface Project { id:string; name:string; location:string; description:string; developer:string; total_units:number; unit_count:number; sold_count:number; }
 
 const CATEGORY_LABELS: Record<string, string> = {
   'Novogradnja': 'Novogradnja',
@@ -35,9 +36,12 @@ function PropertiesPageInner() {
 
   const [properties, setProperties] = useState<Property[]>([]);
   const [owners, setOwners] = useState<Owner[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [showModal, setShowModal] = useState(false);
+  const [showProjectModal, setShowProjectModal] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [advFilters, setAdvFilters] = useState({minPrice:'',maxPrice:'',minRooms:'',maxRooms:'',minArea:'',maxArea:'',floor:'',parking:'',heating:'',terrace:'',owner:'',location:''});
   const [toast, setToast] = useState<{msg:string;type:string}|null>(null);
@@ -46,8 +50,9 @@ function PropertiesPageInner() {
     status:'Aktivna',owner_id:'',newOwnerFirst:'',newOwnerLast:'',newOwnerPhone:'',
     newOwnerEmail:'',newOwnerNotes:'',createNewOwner:false,
     floor:'',condition:'',parking:'',terrace:'',heating:'',
-    street:'',building_number:'',apartment_number:''
+    street:'',building_number:'',apartment_number:'',project_id:''
   });
+  const [projectForm, setProjectForm] = useState({name:'',location:'',description:'',developer:'',total_units:''});
 
   // Update default form type when category changes
   useEffect(() => {
@@ -65,6 +70,9 @@ function PropertiesPageInner() {
     Object.entries(advFilters).forEach(([k,v]) => { if (v) params.set(k, v); });
     fetch(`/api/properties?${params}`).then(r=>r.json()).then(d=>setProperties(d.properties||[]));
     fetch('/api/owners').then(r=>r.json()).then(d=>setOwners(d.owners||[]));
+    if (category === 'Novogradnja') {
+      fetch('/api/projects').then(r=>r.json()).then(d=>setProjects(d.projects||[]));
+    }
   }, [search, category, filterStatus, advFilters]);
 
   useEffect(() => { load(); }, [load]);
@@ -89,10 +97,10 @@ function PropertiesPageInner() {
 
     const res = await fetch('/api/properties', {
       method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({...form, price:Number(form.price), area:Number(form.area)||null, rooms:Number(form.rooms)||null, owner_id:ownerId, images:[]})
+      body: JSON.stringify({...form, price:Number(form.price), area:Number(form.area)||null, rooms:Number(form.rooms)||null, owner_id:ownerId, images:[], project_id:form.project_id||null})
     });
     if (res.ok) { showToast('Nekretnina kreirana!'); setShowModal(false); load();
-      setForm({title:'',description:'',location:'',price:'',type:category || 'Novogradnja',area:'',rooms:'',status:'Aktivna',owner_id:'',newOwnerFirst:'',newOwnerLast:'',newOwnerPhone:'',newOwnerEmail:'',newOwnerNotes:'',createNewOwner:false,floor:'',condition:'',parking:'',terrace:'',heating:'',street:'',building_number:'',apartment_number:''});
+      setForm({title:'',description:'',location:'',price:'',type:category || 'Novogradnja',area:'',rooms:'',status:'Aktivna',owner_id:'',newOwnerFirst:'',newOwnerLast:'',newOwnerPhone:'',newOwnerEmail:'',newOwnerNotes:'',createNewOwner:false,floor:'',condition:'',parking:'',terrace:'',heating:'',street:'',building_number:'',apartment_number:'',project_id:''});
     } else { const d = await res.json(); showToast(d.error||'Greška','error'); }
   };
 
@@ -109,8 +117,37 @@ function PropertiesPageInner() {
 
   const formatPrice = (p:number) => p >= 1000 ? `€${p.toLocaleString('sr-RS')}` : `€${p}/mes`;
 
+  const handleProjectSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const res = await fetch('/api/projects', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({...projectForm, total_units:Number(projectForm.total_units)||null})
+    });
+    if (res.ok) { showToast('Projekat kreiran!'); setShowProjectModal(false); setProjectForm({name:'',location:'',description:'',developer:'',total_units:''}); load(); }
+    else { const d = await res.json(); showToast(d.error||'Greška','error'); }
+  };
+
+  const toggleProject = (pid: string) => {
+    setExpandedProjects(prev => {
+      const next = new Set(prev);
+      next.has(pid) ? next.delete(pid) : next.add(pid);
+      return next;
+    });
+  };
+
+  const handleDeleteProject = async (pid: string) => {
+    if (!confirm('Obrisati projekat? Stanovi neće biti obrisani.')) return;
+    await fetch(`/api/projects/${pid}`, {method:'DELETE'});
+    showToast('Projekat obrisan'); load();
+  };
+
   const pageTitle = CATEGORY_LABELS[category] || 'Sve Nekretnine';
   const isRente = category === 'Rente';
+  const isNovogradnja = category === 'Novogradnja';
+
+  // For novogradnja: separate project-linked and standalone properties
+  const projectProperties = isNovogradnja ? properties.filter(p => p.project_id) : [];
+  const standaloneProperties = isNovogradnja ? properties.filter(p => !p.project_id) : properties;
 
   return (
     <>
@@ -130,7 +167,8 @@ function PropertiesPageInner() {
             </select>
             <button className="btn-outline btn-sm" onClick={()=>setShowAdvanced(!showAdvanced)}>🔍 {showAdvanced?'Sakrij':'Filteri'}</button>
             <a href="/api/export/properties" className="btn-outline btn-sm">📥 CSV</a>
-            <button className="btn-gold btn-sm" onClick={()=>setShowModal(true)}>+ Dodaj</button>
+            {isNovogradnja && <button className="btn-outline btn-sm" onClick={()=>setShowProjectModal(true)} style={{borderColor:'rgba(212,175,55,0.4)'}}>🏗️ + Projekat</button>}
+            <button className="btn-gold btn-sm" onClick={()=>setShowModal(true)}>+ Dodaj Stan</button>
           </div>
         </div>
         {showAdvanced && (
@@ -150,6 +188,62 @@ function PropertiesPageInner() {
             <div style={{display:'flex',alignItems:'flex-end'}}><button className="btn-outline btn-sm" onClick={()=>setAdvFilters({minPrice:'',maxPrice:'',minRooms:'',maxRooms:'',minArea:'',maxArea:'',floor:'',parking:'',heating:'',terrace:'',owner:'',location:''})}>✕ Resetuj</button></div>
           </div>
         )}
+        {/* Novogradnja: Project Groups */}
+        {isNovogradnja && projects.length > 0 && (
+          <div style={{marginBottom:20}}>
+            {projects.map(proj => {
+              const projUnits = projectProperties.filter(p => p.project_id === proj.id);
+              const isExpanded = expandedProjects.has(proj.id);
+              return (
+                <div key={proj.id} style={{marginBottom:12,border:'1px solid rgba(212,175,55,0.15)',borderRadius:12,overflow:'hidden',background:'rgba(212,175,55,0.03)'}}>
+                  <div onClick={()=>toggleProject(proj.id)} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'14px 18px',cursor:'pointer',transition:'background 0.2s'}}
+                    onMouseEnter={e=>(e.currentTarget.style.background='rgba(212,175,55,0.06)')}
+                    onMouseLeave={e=>(e.currentTarget.style.background='transparent')}>
+                    <div style={{display:'flex',alignItems:'center',gap:12}}>
+                      <span style={{color:'var(--gold)',fontSize:'1.1rem',fontWeight:700,transition:'transform 0.2s',transform:isExpanded?'rotate(90deg)':'rotate(0deg)'}}>▶</span>
+                      <div>
+                        <div style={{fontWeight:600,fontSize:'1rem',fontFamily:'Cinzel,serif',color:'var(--gold)'}}>{proj.name}</div>
+                        <div style={{fontSize:'0.78rem',color:'var(--gray-300)',marginTop:2}}>📍 {proj.location} {proj.developer && `· 🏢 ${proj.developer}`}</div>
+                      </div>
+                    </div>
+                    <div style={{display:'flex',alignItems:'center',gap:12}}>
+                      <span style={{fontSize:'0.82rem',color:'var(--gray-200)',background:'rgba(212,175,55,0.1)',padding:'3px 10px',borderRadius:20,fontWeight:600}}>
+                        {projUnits.length} {projUnits.length === 1 ? 'stan' : 'stanova'}
+                        {proj.sold_count > 0 && <span style={{color:'#66bb6a'}}> · {proj.sold_count} prodato</span>}
+                      </span>
+                      <button className="btn-danger btn-sm" onClick={e=>{e.stopPropagation();handleDeleteProject(proj.id)}} style={{padding:'4px 8px',fontSize:'0.72rem'}}>✕</button>
+                    </div>
+                  </div>
+                  {isExpanded && (
+                    <div style={{borderTop:'1px solid rgba(212,175,55,0.1)',padding:'0'}}>
+                      <table className="data-table" style={{marginBottom:0}}>
+                        <thead><tr><th>Naslov</th><th>Lokacija</th><th>Cena</th><th>m²</th><th>Status</th><th>Ugovor</th><th>Sajt</th><th>Akcije</th></tr></thead>
+                        <tbody>
+                          {projUnits.map(p=>(
+                            <tr key={p.id}>
+                              <td><Link href={`/dashboard/properties/${p.id}`} style={{color:'#fff',fontWeight:500}}><span style={{color:'var(--gold)',fontWeight:700,fontFamily:'monospace',fontSize:'0.82rem',marginRight:8,background:'rgba(212,175,55,0.1)',padding:'2px 6px',borderRadius:4}}>{p.code}</span>{p.title}</Link></td>
+                              <td style={{color:'var(--gray-300)',fontSize:'0.85rem'}}>{p.location}</td>
+                              <td style={{color:'var(--gold)',fontWeight:600}}>{formatPrice(p.price)}</td>
+                              <td>{p.area}m²</td>
+                              <td><span className={`badge ${p.status==='Aktivna'?'badge-active':p.status==='Prodato'?'badge-sold':'badge-negotiation'}`}>{p.status}</span></td>
+                              <td><span style={{fontSize:'0.78rem',fontWeight:600,padding:'3px 8px',borderRadius:6,background:p.contract_signed?'rgba(76,175,80,0.12)':'rgba(255,152,0,0.1)',color:p.contract_signed?'#66bb6a':'#ffb74d'}}>{p.contract_signed?'✓ Da':'✕ Ne'}</span></td>
+                              <td><button className={`publish-toggle ${p.published?'published':'unpublished'}`} onClick={()=>togglePublish(p.id)}>{p.published?'✓':'Objavi'}</button></td>
+                              <td><button className="btn-danger btn-sm" onClick={()=>handleDelete(p.id)}>🗑</button></td>
+                            </tr>
+                          ))}
+                          {projUnits.length===0 && <tr><td colSpan={8} style={{textAlign:'center',padding:20,color:'var(--gray-300)'}}>Nema stanova u projektu</td></tr>}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Standalone properties (or all for non-Novogradnja) */}
+        {isNovogradnja && standaloneProperties.length > 0 && <div style={{fontSize:'0.85rem',color:'var(--gray-300)',padding:'8px 0',fontWeight:600,fontFamily:'Cinzel,serif'}}>Pojedinačni Stanovi</div>}
         <div className="table-overflow">
           <table className="data-table">
             <thead>
@@ -167,9 +261,9 @@ function PropertiesPageInner() {
               </tr>
             </thead>
             <tbody>
-              {properties.map(p=>(
+              {standaloneProperties.map(p=>(
                 <tr key={p.id}>
-                  <td><Link href={`/dashboard/properties/${p.id}`} style={{color:'#fff',fontWeight:500}}>{p.title}</Link></td>
+                  <td><Link href={`/dashboard/properties/${p.id}`} style={{color:'#fff',fontWeight:500}}><span style={{color:'var(--gold)',fontWeight:700,fontFamily:'monospace',fontSize:'0.82rem',marginRight:8,background:'rgba(212,175,55,0.1)',padding:'2px 6px',borderRadius:4}}>{p.code}</span>{p.title}</Link></td>
                   <td style={{color:'var(--gray-300)',fontSize:'0.85rem'}}>{p.location}</td>
                   <td style={{color:'var(--gold)',fontWeight:600}}>{formatPrice(p.price)}</td>
                   {!category && <td><span className="badge badge-new">{p.type}</span></td>}
@@ -184,7 +278,8 @@ function PropertiesPageInner() {
                   <td><button className="btn-danger btn-sm" onClick={()=>handleDelete(p.id)}>🗑</button></td>
                 </tr>
               ))}
-              {properties.length===0 && <tr><td colSpan={category ? 9 : 10} style={{textAlign:'center',padding:40,color:'var(--gray-300)'}}>Nema nekretnina u kategoriji {pageTitle}</td></tr>}
+              {standaloneProperties.length===0 && !isNovogradnja && <tr><td colSpan={category ? 9 : 10} style={{textAlign:'center',padding:40,color:'var(--gray-300)'}}>Nema nekretnina u kategoriji {pageTitle}</td></tr>}
+              {standaloneProperties.length===0 && isNovogradnja && projects.length===0 && <tr><td colSpan={9} style={{textAlign:'center',padding:40,color:'var(--gray-300)'}}>Nema nekretnina u kategoriji {pageTitle}</td></tr>}
             </tbody>
           </table>
         </div>
@@ -244,6 +339,15 @@ function PropertiesPageInner() {
                     </select>
                   </div>
                 </div>
+                {(form.type === 'Novogradnja' || isNovogradnja) && projects.length > 0 && (
+                  <div className="form-group">
+                    <label>Projekat (opciono)</label>
+                    <select className="form-select" value={form.project_id} onChange={e=>setForm({...form,project_id:e.target.value})}>
+                      <option value="">Bez projekta — pojedinačan stan</option>
+                      {projects.map(pr=><option key={pr.id} value={pr.id}>{pr.name} — {pr.location}</option>)}
+                    </select>
+                  </div>
+                )}
                 <div className="form-row">
                   <div className="form-group">
                     <label>Površina (m²)</label>
@@ -328,6 +432,33 @@ function PropertiesPageInner() {
               <div className="modal-footer">
                 <button type="button" className="btn-outline" onClick={()=>setShowModal(false)}>Otkaži</button>
                 <button type="submit" className="btn-gold">Kreiraj</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Project Creation Modal */}
+      {showProjectModal && (
+        <div className="modal-overlay" onClick={()=>setShowProjectModal(false)}>
+          <div className="modal" onClick={e=>e.stopPropagation()} style={{maxWidth:500}}>
+            <div className="modal-header">
+              <div className="modal-title">🏗️ Novi Projekat Novogradnje</div>
+              <button className="modal-close" onClick={()=>setShowProjectModal(false)}>×</button>
+            </div>
+            <form onSubmit={handleProjectSubmit}>
+              <div className="modal-body">
+                <div className="form-group"><label>Naziv Projekta *</label><input className="form-input" required value={projectForm.name} onChange={e=>setProjectForm({...projectForm,name:e.target.value})} placeholder='Npr. Sajmište KP95' /></div>
+                <div className="form-row">
+                  <div className="form-group"><label>Lokacija *</label><select className="form-select" required value={projectForm.location} onChange={e=>setProjectForm({...projectForm,location:e.target.value})}><option value="">Izaberite</option>{NOVI_SAD_LOKACIJE.map(l=><option key={l}>{l}</option>)}</select></div>
+                  <div className="form-group"><label>Investitor</label><input className="form-input" value={projectForm.developer} onChange={e=>setProjectForm({...projectForm,developer:e.target.value})} placeholder='Npr. Graviton' /></div>
+                </div>
+                <div className="form-group"><label>Ukupan Broj Stanova</label><input className="form-input" type="number" value={projectForm.total_units} onChange={e=>setProjectForm({...projectForm,total_units:e.target.value})} /></div>
+                <div className="form-group"><label>Opis</label><textarea className="form-textarea" value={projectForm.description} onChange={e=>setProjectForm({...projectForm,description:e.target.value})} placeholder='Kratak opis projekta...' /></div>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn-outline" onClick={()=>setShowProjectModal(false)}>Otkaži</button>
+                <button type="submit" className="btn-gold">Kreiraj Projekat</button>
               </div>
             </form>
           </div>
