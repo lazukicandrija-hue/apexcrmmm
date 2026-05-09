@@ -11,9 +11,14 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
   const { id } = await params;
   if (id === user.id) return NextResponse.json({ error: 'Ne možete obrisati sopstveni nalog' }, { status: 400 });
 
-  const db = getDb();
-  db.prepare('DELETE FROM users WHERE id = ?').run(id);
-  return NextResponse.json({ message: 'Korisnik obrisan' });
+  try {
+    const db = getDb();
+    db.prepare('DELETE FROM users WHERE id = ?').run(id);
+    return NextResponse.json({ message: 'Korisnik obrisan' });
+  } catch (error) {
+    console.error('Error deleting user:', error);
+    return NextResponse.json({ error: 'Greška pri brisanju korisnika' }, { status: 500 });
+  }
 }
 
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
