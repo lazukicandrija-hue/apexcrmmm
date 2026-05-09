@@ -45,7 +45,8 @@ function PropertiesPageInner() {
     title:'',description:'',location:'',price:'',type:category || 'Novogradnja',area:'',rooms:'',
     status:'Aktivna',owner_id:'',newOwnerFirst:'',newOwnerLast:'',newOwnerPhone:'',
     newOwnerEmail:'',newOwnerNotes:'',createNewOwner:false,
-    floor:'',condition:'',parking:'',terrace:'',heating:''
+    floor:'',condition:'',parking:'',terrace:'',heating:'',
+    street:'',building_number:'',apartment_number:''
   });
 
   // Update default form type when category changes
@@ -91,7 +92,7 @@ function PropertiesPageInner() {
       body: JSON.stringify({...form, price:Number(form.price), area:Number(form.area)||null, rooms:Number(form.rooms)||null, owner_id:ownerId, images:[]})
     });
     if (res.ok) { showToast('Nekretnina kreirana!'); setShowModal(false); load();
-      setForm({title:'',description:'',location:'',price:'',type:category || 'Novogradnja',area:'',rooms:'',status:'Aktivna',owner_id:'',newOwnerFirst:'',newOwnerLast:'',newOwnerPhone:'',newOwnerEmail:'',newOwnerNotes:'',createNewOwner:false,floor:'',condition:'',parking:'',terrace:'',heating:''});
+      setForm({title:'',description:'',location:'',price:'',type:category || 'Novogradnja',area:'',rooms:'',status:'Aktivna',owner_id:'',newOwnerFirst:'',newOwnerLast:'',newOwnerPhone:'',newOwnerEmail:'',newOwnerNotes:'',createNewOwner:false,floor:'',condition:'',parking:'',terrace:'',heating:'',street:'',building_number:'',apartment_number:''});
     } else { const d = await res.json(); showToast(d.error||'Greška','error'); }
   };
 
@@ -213,6 +214,20 @@ function PropertiesPageInner() {
                   <div className="form-group">
                     <label>{isRente ? 'Mesečna Cena (€) *' : 'Cena (€) *'}</label>
                     <input className="form-input" type="number" required value={form.price} onChange={e=>setForm({...form,price:e.target.value})} />
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Ulica</label>
+                    <input className="form-input" value={form.street} onChange={e=>setForm({...form,street:e.target.value})} placeholder="Npr. Bulevar Oslobođenja" />
+                  </div>
+                  <div className="form-group">
+                    <label>Broj zgrade/kuće</label>
+                    <input className="form-input" value={form.building_number} onChange={e=>setForm({...form,building_number:e.target.value})} placeholder="Npr. 45" />
+                  </div>
+                  <div className="form-group">
+                    <label>Broj stana</label>
+                    <input className="form-input" value={form.apartment_number} onChange={e=>setForm({...form,apartment_number:e.target.value})} placeholder="Npr. 12" />
                   </div>
                 </div>
                 <div className="form-row">

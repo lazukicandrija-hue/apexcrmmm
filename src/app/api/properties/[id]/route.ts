@@ -39,6 +39,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       UPDATE properties SET title=?, description=?, notes=?, location=?, price=?, type=?, area=?, rooms=?,
       status=?, owner_id=?, images=?, published=?, floor=?, condition=?, parking=?, terrace=?, heating=?,
       cadastral_notes=?, contract_signed=?, reminder_text=?,
+      street=?, building_number=?, apartment_number=?,
       updated_at=datetime('now') WHERE id=?
     `).run(
       body.title, body.description || '', body.notes ?? old.notes ?? '', body.location, body.price, body.type,
@@ -47,7 +48,9 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       body.floor || null, body.condition || null, body.parking || null,
       body.terrace || null, body.heating || null,
       body.cadastral_notes ?? old.cadastral_notes ?? null, body.contract_signed != null ? (body.contract_signed ? 1 : 0) : old.contract_signed,
-      body.reminder_text ?? old.reminder_text ?? null, id
+      body.reminder_text ?? old.reminder_text ?? null,
+      body.street ?? old.street ?? null, body.building_number ?? old.building_number ?? null, body.apartment_number ?? old.apartment_number ?? null,
+      id
     );
 
     // Audit log: compare fields and log changes
@@ -70,6 +73,9 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       { key: 'cadastral_notes', label: 'Katastar' },
       { key: 'contract_signed', label: 'Ugovor potpisan' },
       { key: 'reminder_text', label: 'Podsetnik' },
+      { key: 'street', label: 'Ulica' },
+      { key: 'building_number', label: 'Broj zgrade/kuće' },
+      { key: 'apartment_number', label: 'Broj stana' },
     ];
 
     const insertAudit = db.prepare(

@@ -60,6 +60,8 @@ export async function GET(request: Request) {
     query += ` AND (o.first_name LIKE ? OR o.last_name LIKE ? OR (o.first_name || ' ' || o.last_name) LIKE ?)`;
     params.push(`%${owner}%`, `%${owner}%`, `%${owner}%`);
   }
+  const location = searchParams.get('location');
+  if (location) { query += ` AND p.location = ?`; params.push(location); }
 
   const allowedSorts = ['price', 'area', 'created_at', 'title', 'rooms'];
   const sortCol = allowedSorts.includes(sort) ? sort : 'created_at';
@@ -81,15 +83,16 @@ export async function POST(request: Request) {
     const id = uuidv4();
 
     db.prepare(`
-      INSERT INTO properties (id, title, description, location, price, type, area, rooms, status, owner_id, images, published, floor, condition, parking, terrace, heating, cadastral_notes, contract_signed)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO properties (id, title, description, location, price, type, area, rooms, status, owner_id, images, published, floor, condition, parking, terrace, heating, cadastral_notes, contract_signed, street, building_number, apartment_number)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       id, body.title, body.description || '', body.location, body.price, body.type,
       body.area || null, body.rooms || null, body.status || 'Aktivna',
       body.owner_id, JSON.stringify(body.images || []), body.published ? 1 : 0,
       body.floor || null, body.condition || null, body.parking || null,
       body.terrace || null, body.heating || null,
-      body.cadastral_notes || null, body.contract_signed ? 1 : 0
+      body.cadastral_notes || null, body.contract_signed ? 1 : 0,
+      body.street || null, body.building_number || null, body.apartment_number || null
     );
 
     return NextResponse.json({ id, message: 'Nekretnina kreirana' }, { status: 201 });

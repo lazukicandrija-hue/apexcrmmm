@@ -10,6 +10,7 @@ interface Property {
   owner_id:string; created_at:string; updated_at:string;
   floor:string; condition:string; parking:string; terrace:string; heating:string;
   cadastral_notes:string; contract_signed:number; reminder_text:string;
+  street:string; building_number:string; apartment_number:string;
 }
 interface NoteEntry { id:string; content:string; created_at:string; }
 interface AuditEntry { id:string; field_name:string; old_value:string; new_value:string; user_name:string; changed_at:string; }
@@ -88,7 +89,7 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
 
   const enterEdit = () => {
     if (!property) return;
-    setEditForm({title:property.title,description:property.description||'',location:property.location,price:property.price,type:property.type,area:property.area||0,rooms:property.rooms||0,status:property.status,owner_id:property.owner_id,floor:property.floor||'',condition:property.condition||'',parking:property.parking||'',terrace:property.terrace||'',heating:property.heating||''});
+    setEditForm({title:property.title,description:property.description||'',location:property.location,price:property.price,type:property.type,area:property.area||0,rooms:property.rooms||0,status:property.status,owner_id:property.owner_id,floor:property.floor||'',condition:property.condition||'',parking:property.parking||'',terrace:property.terrace||'',heating:property.heating||'',street:property.street||'',building_number:property.building_number||'',apartment_number:property.apartment_number||''});
     setOwnerForm({first_name:property.owner_first_name||'',last_name:property.owner_last_name||'',phone:property.owner_phone||'',email:property.owner_email||'',notes:property.owner_notes||''});
     setEditMode(true);
   };
@@ -348,6 +349,11 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
                 <div className="form-group"><label>Cena (€)</label><input className="form-input" type="number" value={editForm.price||''} onChange={e=>setEditForm({...editForm,price:e.target.value})} /></div>
               </div>
               <div className="form-row">
+                <div className="form-group"><label>Ulica</label><input className="form-input" value={editForm.street||''} onChange={e=>setEditForm({...editForm,street:e.target.value})} placeholder="Npr. Bulevar Oslobođenja" /></div>
+                <div className="form-group"><label>Broj zgrade/kuće</label><input className="form-input" value={editForm.building_number||''} onChange={e=>setEditForm({...editForm,building_number:e.target.value})} placeholder="Npr. 45" /></div>
+                <div className="form-group"><label>Broj stana</label><input className="form-input" value={editForm.apartment_number||''} onChange={e=>setEditForm({...editForm,apartment_number:e.target.value})} placeholder="Npr. 12" /></div>
+              </div>
+              <div className="form-row">
                 <div className="form-group"><label>Tip</label><select className="form-select" value={editForm.type||''} onChange={e=>setEditForm({...editForm,type:e.target.value})}><option>Novogradnja</option><option>Starogradnja</option><option>Lokali</option><option>Rente</option></select></div>
                 <div className="form-group"><label>Status</label><select className="form-select" value={editForm.status||''} onChange={e=>setEditForm({...editForm,status:e.target.value})}><option>Aktivna</option><option>Prodato</option><option>U pregovoru</option></select></div>
               </div>
@@ -381,6 +387,16 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
                 </div>
               </div>
               <div className="detail-row"><span className="detail-label">Dodato</span><span className="detail-value">{new Date(property.created_at).toLocaleDateString('sr-RS')}</span></div>
+              {(property.street || property.building_number || property.apartment_number) && (
+                <div style={{marginTop:12,padding:'10px 12px',background:'rgba(212,175,55,0.04)',borderRadius:8,border:'1px solid rgba(212,175,55,0.08)'}}>
+                  <div className="detail-label" style={{marginBottom:6,color:'var(--gold)',fontSize:'0.72rem'}}>📍 Adresa</div>
+                  <div style={{fontSize:'0.88rem',color:'var(--gray-200)',lineHeight:1.6}}>
+                    {property.street && <span>{property.street}</span>}
+                    {property.building_number && <span> {property.building_number}</span>}
+                    {property.apartment_number && <span>, stan {property.apartment_number}</span>}
+                  </div>
+                </div>
+              )}
               {property.floor && <div className="detail-row"><span className="detail-label">Sprat</span><span className="detail-value">{property.floor}</span></div>}
               {property.condition && <div className="detail-row"><span className="detail-label">Stanje</span><span className="detail-value">{property.condition}</span></div>}
               {property.parking && <div className="detail-row"><span className="detail-label">Parking</span><span className="detail-value">{property.parking}</span></div>}
