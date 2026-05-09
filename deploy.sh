@@ -54,7 +54,7 @@ ssh root@46.101.250.53 '
   # ===== STEP 7: Restart with DATA_DIR environment variable =====
   pm2 delete apex-crm 2>/dev/null || true
   cd /opt/apex-crm/.next/standalone
-  DATA_DIR=/opt/apex-crm/data PORT=3000 pm2 start server.js --name apex-crm --cwd /opt/apex-crm/.next/standalone
+  DATA_DIR=/opt/apex-crm/data PORT=3001 pm2 start server.js --name apex-crm --cwd /opt/apex-crm/.next/standalone
   pm2 save
 
   echo ""

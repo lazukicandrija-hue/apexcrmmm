@@ -36,6 +36,7 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
   // Edit mode
   const [editMode, setEditMode] = useState(false);
   const [editForm, setEditForm] = useState<Record<string,string|number>>({});
+  const [ownerForm, setOwnerForm] = useState<Record<string,string>>({});
   const [owners, setOwners] = useState<Owner[]>([]);
   const [saving, setSaving] = useState(false);
   // Audit log
@@ -76,14 +77,21 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
   const enterEdit = () => {
     if (!property) return;
     setEditForm({title:property.title,description:property.description||'',location:property.location,price:property.price,type:property.type,area:property.area||0,rooms:property.rooms||0,status:property.status,owner_id:property.owner_id,floor:property.floor||'',condition:property.condition||'',parking:property.parking||'',terrace:property.terrace||'',heating:property.heating||''});
+    setOwnerForm({first_name:property.owner_first_name||'',last_name:property.owner_last_name||'',phone:property.owner_phone||'',email:property.owner_email||'',notes:property.owner_notes||''});
     setEditMode(true);
   };
   const cancelEdit = () => setEditMode(false);
   const saveEdit = async () => {
     setSaving(true);
+    // Save property
     const res = await fetch(`/api/properties/${id}`, {
       method:'PUT', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({...editForm, price:Number(editForm.price), area:Number(editForm.area)||null, rooms:Number(editForm.rooms)||null, images:propertyImages, published:property!.published, cadastral_notes:cadastralNotes, contract_signed:contractSigned?1:0, reminder_text:reminderText})
+    });
+    // Save owner changes too
+    await fetch(`/api/owners/${property!.owner_id}`, {
+      method:'PUT', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(ownerForm)
     });
     if (res.ok) { showToast('Sve promene sačuvane ✓'); setEditMode(false); load(); }
     else { const d = await res.json(); showToast(d.error||'Greška','error'); }
@@ -441,10 +449,22 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
         <div>
           <div className="detail-card" style={{marginBottom:20}}>
             <div className="detail-card-title">Vlasnik</div>
-            <div className="detail-row"><span className="detail-label">Ime</span><span className="detail-value">{property.owner_first_name} {property.owner_last_name}</span></div>
-            <div className="detail-row"><span className="detail-label">Telefon</span><span className="detail-value"><a href={`tel:${property.owner_phone}`} style={{color:'var(--gold)'}}>{property.owner_phone}</a></span></div>
-            <div className="detail-row"><span className="detail-label">Email</span><span className="detail-value"><a href={`mailto:${property.owner_email}`} style={{color:'var(--gold)'}}>{property.owner_email}</a></span></div>
-            {property.owner_notes && <div style={{marginTop:12}}><div className="detail-label" style={{marginBottom:6}}>Bio</div><p style={{fontSize:'0.82rem',color:'var(--gray-200)',background:'rgba(212,175,55,0.05)',padding:10,borderRadius:8,lineHeight:1.5}}>{property.owner_notes}</p></div>}
+            {editMode ? (<>
+              <div className="form-row">
+                <div className="form-group"><label>Ime</label><input className="form-input" value={ownerForm.first_name||''} onChange={e=>setOwnerForm({...ownerForm,first_name:e.target.value})} /></div>
+                <div className="form-group"><label>Prezime</label><input className="form-input" value={ownerForm.last_name||''} onChange={e=>setOwnerForm({...ownerForm,last_name:e.target.value})} /></div>
+              </div>
+              <div className="form-row">
+                <div className="form-group"><label>Telefon</label><input className="form-input" value={ownerForm.phone||''} onChange={e=>setOwnerForm({...ownerForm,phone:e.target.value})} /></div>
+                <div className="form-group"><label>Email</label><input className="form-input" value={ownerForm.email||''} onChange={e=>setOwnerForm({...ownerForm,email:e.target.value})} /></div>
+              </div>
+              <div className="form-group"><label>Bio / Napomene</label><textarea className="form-textarea" value={ownerForm.notes||''} onChange={e=>setOwnerForm({...ownerForm,notes:e.target.value})} style={{minHeight:60}} /></div>
+            </>) : (<>
+              <div className="detail-row"><span className="detail-label">Ime</span><span className="detail-value">{property.owner_first_name} {property.owner_last_name}</span></div>
+              <div className="detail-row"><span className="detail-label">Telefon</span><span className="detail-value"><a href={`tel:${property.owner_phone}`} style={{color:'var(--gold)'}}>{property.owner_phone}</a></span></div>
+              <div className="detail-row"><span className="detail-label">Email</span><span className="detail-value"><a href={`mailto:${property.owner_email}`} style={{color:'var(--gold)'}}>{property.owner_email}</a></span></div>
+              {property.owner_notes && <div style={{marginTop:12}}><div className="detail-label" style={{marginBottom:6}}>Bio</div><p style={{fontSize:'0.82rem',color:'var(--gray-200)',background:'rgba(212,175,55,0.05)',padding:10,borderRadius:8,lineHeight:1.5}}>{property.owner_notes}</p></div>}
+            </>)}
           </div>
 
           {/* Owner Notes Timeline */}
