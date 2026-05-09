@@ -82,12 +82,16 @@ export async function POST(request: Request) {
     const db = getDb();
     const id = uuidv4();
 
+    const price = body.price != null ? Number(body.price) : null;
+    const area = body.area != null && body.area !== '' ? Number(body.area) : null;
+    const rooms = body.rooms != null && body.rooms !== '' ? Number(body.rooms) : null;
+
     db.prepare(`
       INSERT INTO properties (id, title, description, location, price, type, area, rooms, status, owner_id, images, published, floor, condition, parking, terrace, heating, cadastral_notes, contract_signed, street, building_number, apartment_number)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
-      id, body.title, body.description || '', body.location, body.price, body.type,
-      body.area || null, body.rooms || null, body.status || 'Aktivna',
+      id, body.title, body.description || '', body.location, price, body.type,
+      area, rooms, body.status || 'Aktivna',
       body.owner_id, JSON.stringify(body.images || []), body.published ? 1 : 0,
       body.floor || null, body.condition || null, body.parking || null,
       body.terrace || null, body.heating || null,

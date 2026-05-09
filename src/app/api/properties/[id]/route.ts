@@ -35,6 +35,10 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     const old = db.prepare('SELECT * FROM properties WHERE id = ?').get(id) as Record<string, unknown> | undefined;
     if (!old) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
+    const price = body.price != null ? Number(body.price) : old.price;
+    const area = body.area != null && body.area !== '' ? Number(body.area) : old.area;
+    const rooms = body.rooms != null && body.rooms !== '' ? Number(body.rooms) : old.rooms;
+
     db.prepare(`
       UPDATE properties SET title=?, description=?, notes=?, location=?, price=?, type=?, area=?, rooms=?,
       status=?, owner_id=?, images=?, published=?, floor=?, condition=?, parking=?, terrace=?, heating=?,
@@ -42,8 +46,8 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       street=?, building_number=?, apartment_number=?,
       updated_at=datetime('now') WHERE id=?
     `).run(
-      body.title, body.description || '', body.notes ?? old.notes ?? '', body.location, body.price, body.type,
-      body.area || null, body.rooms || null, body.status || 'Aktivna',
+      body.title, body.description || '', body.notes ?? old.notes ?? '', body.location, price, body.type,
+      area, rooms, body.status || 'Aktivna',
       body.owner_id, JSON.stringify(body.images || JSON.parse((old.images as string) || '[]')), body.published != null ? (body.published ? 1 : 0) : old.published,
       body.floor || null, body.condition || null, body.parking || null,
       body.terrace || null, body.heating || null,

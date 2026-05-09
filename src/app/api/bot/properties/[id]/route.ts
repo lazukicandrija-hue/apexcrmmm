@@ -42,10 +42,10 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       title: body.title ?? existing.title,
       description: body.description ?? existing.description,
       location: body.location ?? existing.location,
-      price: body.price ?? existing.price,
+      price: body.price != null ? Number(body.price) : existing.price,
       type: body.type ?? existing.type,
-      area: body.area ?? existing.area,
-      rooms: body.rooms ?? existing.rooms,
+      area: body.area != null && body.area !== '' ? Number(body.area) : existing.area,
+      rooms: body.rooms != null && body.rooms !== '' ? Number(body.rooms) : existing.rooms,
       status: body.status ?? existing.status,
       owner_id: body.owner_id ?? existing.owner_id,
       images: body.images ? JSON.stringify(body.images) : (existing.images as string),
@@ -55,17 +55,23 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       parking: body.parking ?? existing.parking,
       terrace: body.terrace ?? existing.terrace,
       heating: body.heating ?? existing.heating,
+      street: body.street ?? existing.street,
+      building_number: body.building_number ?? existing.building_number,
+      apartment_number: body.apartment_number ?? existing.apartment_number,
     };
 
     db.prepare(`
       UPDATE properties SET title=?, description=?, location=?, price=?, type=?, area=?, rooms=?,
       status=?, owner_id=?, images=?, published=?, floor=?, condition=?, parking=?, terrace=?, heating=?,
+      street=?, building_number=?, apartment_number=?,
       updated_at=datetime('now') WHERE id=?
     `).run(
       updated.title, updated.description, updated.location, updated.price, updated.type,
       updated.area, updated.rooms, updated.status, updated.owner_id, updated.images,
       updated.published, updated.floor, updated.condition, updated.parking,
-      updated.terrace, updated.heating, id
+      updated.terrace, updated.heating,
+      updated.street, updated.building_number, updated.apartment_number,
+      id
     );
 
     return NextResponse.json({ message: 'Nekretnina ažurirana', id });
