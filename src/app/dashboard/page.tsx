@@ -1,9 +1,9 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 
-interface Property { id:string; title:string; location:string; price:number; type:string; status:string; created_at:string; next_action_date:string; }
-interface Buyer { id:string; first_name:string; last_name:string; next_action_date:string; status:string; desired_type:string; }
+interface Property { id:string; title:string; location:string; price:number; type:string; status:string; created_at:string; next_action_date:string; reminder_text:string; }
+interface Buyer { id:string; first_name:string; last_name:string; next_action_date:string; status:string; desired_type:string; location:string; budget:number; }
 interface Analytics {
   byType: {type:string;count:number}[];
   byStatus: {status:string;count:number}[];
@@ -21,6 +21,8 @@ export default function DashboardPage() {
   const [properties, setProperties] = useState<Property[]>([]);
   const [buyers, setBuyers] = useState<Buyer[]>([]);
   const [analytics, setAnalytics] = useState<Analytics|null>(null);
+  const [showPopup, setShowPopup] = useState(false);
+  const [popupDismissed, setPopupDismissed] = useState(false);
 
   useEffect(() => {
     fetch('/api/properties').then(r=>r.json()).then(d=>setProperties(d.properties||[]));
@@ -43,8 +45,20 @@ export default function DashboardPage() {
     const diff = (new Date(p.next_action_date).getTime() - new Date(today).getTime()) / 86400000;
     return diff <= 3;
   });
+  const todayProps = properties.filter(p => p.next_action_date === today);
+  const todayBuyers = buyers.filter(b => b.next_action_date === today);
   const totalOverdue = overdueBuyers.length + overdueProps.length;
   const totalSoon = soonBuyers.length + soonProps.length;
+  const totalToday = todayProps.length + todayBuyers.length;
+
+  // Auto-show popup when data loads and there are reminders
+  useEffect(() => {
+    if (!popupDismissed && (totalOverdue > 0 || totalToday > 0 || totalSoon > 0)) {
+      setShowPopup(true);
+    }
+  }, [totalOverdue, totalToday, totalSoon, popupDismissed]);
+
+  const dismissPopup = () => { setShowPopup(false); setPopupDismissed(true); };
 
   const getDateBadge = (date: string) => {
     if (!date) return '';
@@ -59,6 +73,127 @@ export default function DashboardPage() {
 
   return (
     <>
+      {/* ===== POPUP REMINDER MODAL ===== */}
+      {showPopup && (
+        <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.7)',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center',backdropFilter:'blur(4px)',animation:'fadeIn 0.3s ease'}} onClick={dismissPopup}>
+          <div style={{background:'linear-gradient(135deg,#1a1a2e 0%,#16213e 100%)',border:'1px solid rgba(212,175,55,0.3)',borderRadius:16,padding:'28px 32px',maxWidth:560,width:'90%',maxHeight:'80vh',overflowY:'auto',boxShadow:'0 20px 60px rgba(0,0,0,0.5),0 0 40px rgba(212,175,55,0.1)'}} onClick={e=>e.stopPropagation()}>
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:20}}>
+              <div style={{display:'flex',alignItems:'center',gap:12}}>
+                <span style={{fontSize:28}}>🔔</span>
+                <div>
+                  <div style={{fontSize:'1.2rem',fontWeight:700,fontFamily:'Cinzel,serif',color:'var(--gold)'}}>Podsetnici</div>
+                  <div style={{fontSize:'0.75rem',color:'var(--gray-300)'}}>{new Date().toLocaleDateString('sr-RS',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</div>
+                </div>
+              </div>
+              <button onClick={dismissPopup} style={{background:'none',border:'none',color:'var(--gray-300)',fontSize:24,cursor:'pointer',padding:4}}>✕</button>
+            </div>
+
+            {/* Overdue */}
+            {totalOverdue > 0 && (
+              <div style={{marginBottom:16}}>
+                <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:10}}>
+                  <span style={{fontSize:16}}>🚨</span>
+                  <span style={{color:'#ff6b6b',fontWeight:700,fontSize:'0.9rem'}}>PROSROČENO ({totalOverdue})</span>
+                </div>
+                <div style={{display:'flex',flexDirection:'column',gap:6}}>
+                  {overdueProps.map(p=>(
+                    <Link key={p.id} href={`/dashboard/properties/${p.id}`} onClick={dismissPopup}
+                      style={{display:'flex',flexDirection:'column',padding:'10px 14px',background:'rgba(255,60,60,0.1)',border:'1px solid rgba(255,60,60,0.2)',borderRadius:10,color:'#fff',textDecoration:'none',transition:'background 0.2s'}}
+                      onMouseEnter={e=>e.currentTarget.style.background='rgba(255,60,60,0.18)'} onMouseLeave={e=>e.currentTarget.style.background='rgba(255,60,60,0.1)'}>
+                      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                        <span style={{fontWeight:600,fontSize:'0.88rem'}}>🏠 {p.title}</span>
+                        <span className="badge badge-overdue">{formatDate(p.next_action_date)}</span>
+                      </div>
+                      {p.reminder_text && <div style={{fontSize:'0.78rem',color:'#ffcdd2',marginTop:4}}>📋 {p.reminder_text}</div>}
+                    </Link>
+                  ))}
+                  {overdueBuyers.map(b=>(
+                    <Link key={b.id} href={`/dashboard/buyers/${b.id}`} onClick={dismissPopup}
+                      style={{display:'flex',flexDirection:'column',padding:'10px 14px',background:'rgba(255,60,60,0.1)',border:'1px solid rgba(255,60,60,0.2)',borderRadius:10,color:'#fff',textDecoration:'none',transition:'background 0.2s'}}
+                      onMouseEnter={e=>e.currentTarget.style.background='rgba(255,60,60,0.18)'} onMouseLeave={e=>e.currentTarget.style.background='rgba(255,60,60,0.1)'}>
+                      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                        <span style={{fontWeight:600,fontSize:'0.88rem'}}>👤 {b.first_name} {b.last_name}</span>
+                        <span className="badge badge-overdue">{formatDate(b.next_action_date)}</span>
+                      </div>
+                      <div style={{fontSize:'0.78rem',color:'#ffcdd2',marginTop:4}}>Traži: {b.desired_type||'neodređeno'} {b.location ? `— ${b.location}` : ''}</div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Today */}
+            {totalToday > 0 && (
+              <div style={{marginBottom:16}}>
+                <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:10}}>
+                  <span style={{fontSize:16}}>📅</span>
+                  <span style={{color:'var(--gold)',fontWeight:700,fontSize:'0.9rem'}}>DANAS ({totalToday})</span>
+                </div>
+                <div style={{display:'flex',flexDirection:'column',gap:6}}>
+                  {todayProps.map(p=>(
+                    <Link key={p.id} href={`/dashboard/properties/${p.id}`} onClick={dismissPopup}
+                      style={{display:'flex',flexDirection:'column',padding:'10px 14px',background:'rgba(212,175,55,0.08)',border:'1px solid rgba(212,175,55,0.2)',borderRadius:10,color:'#fff',textDecoration:'none',transition:'background 0.2s'}}
+                      onMouseEnter={e=>e.currentTarget.style.background='rgba(212,175,55,0.15)'} onMouseLeave={e=>e.currentTarget.style.background='rgba(212,175,55,0.08)'}>
+                      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                        <span style={{fontWeight:600,fontSize:'0.88rem'}}>🏠 {p.title}</span>
+                        <span className="badge badge-soon">DANAS</span>
+                      </div>
+                      {p.reminder_text && <div style={{fontSize:'0.78rem',color:'#ffe082',marginTop:4}}>📋 {p.reminder_text}</div>}
+                    </Link>
+                  ))}
+                  {todayBuyers.map(b=>(
+                    <Link key={b.id} href={`/dashboard/buyers/${b.id}`} onClick={dismissPopup}
+                      style={{display:'flex',flexDirection:'column',padding:'10px 14px',background:'rgba(212,175,55,0.08)',border:'1px solid rgba(212,175,55,0.2)',borderRadius:10,color:'#fff',textDecoration:'none',transition:'background 0.2s'}}
+                      onMouseEnter={e=>e.currentTarget.style.background='rgba(212,175,55,0.15)'} onMouseLeave={e=>e.currentTarget.style.background='rgba(212,175,55,0.08)'}>
+                      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                        <span style={{fontWeight:600,fontSize:'0.88rem'}}>👤 {b.first_name} {b.last_name}</span>
+                        <span className="badge badge-soon">DANAS</span>
+                      </div>
+                      <div style={{fontSize:'0.78rem',color:'#ffe082',marginTop:4}}>Traži: {b.desired_type||'neodređeno'} {b.location ? `— ${b.location}` : ''}</div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Upcoming (next 3 days) */}
+            {totalSoon > 0 && totalOverdue === 0 && totalToday === 0 && (
+              <div style={{marginBottom:16}}>
+                <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:10}}>
+                  <span style={{fontSize:16}}>⏰</span>
+                  <span style={{color:'#81d4fa',fontWeight:700,fontSize:'0.9rem'}}>USKORO ({totalSoon})</span>
+                </div>
+                <div style={{display:'flex',flexDirection:'column',gap:6}}>
+                  {soonProps.map(p=>(
+                    <Link key={p.id} href={`/dashboard/properties/${p.id}`} onClick={dismissPopup}
+                      style={{display:'flex',flexDirection:'column',padding:'10px 14px',background:'rgba(33,150,243,0.08)',border:'1px solid rgba(33,150,243,0.2)',borderRadius:10,color:'#fff',textDecoration:'none'}}>
+                      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                        <span style={{fontWeight:600,fontSize:'0.88rem'}}>🏠 {p.title}</span>
+                        <span className="badge badge-soon">{formatDate(p.next_action_date)}</span>
+                      </div>
+                      {p.reminder_text && <div style={{fontSize:'0.78rem',color:'#b3e5fc',marginTop:4}}>📋 {p.reminder_text}</div>}
+                    </Link>
+                  ))}
+                  {soonBuyers.map(b=>(
+                    <Link key={b.id} href={`/dashboard/buyers/${b.id}`} onClick={dismissPopup}
+                      style={{display:'flex',flexDirection:'column',padding:'10px 14px',background:'rgba(33,150,243,0.08)',border:'1px solid rgba(33,150,243,0.2)',borderRadius:10,color:'#fff',textDecoration:'none'}}>
+                      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                        <span style={{fontWeight:600,fontSize:'0.88rem'}}>👤 {b.first_name} {b.last_name}</span>
+                        <span className="badge badge-soon">{formatDate(b.next_action_date)}</span>
+                      </div>
+                      <div style={{fontSize:'0.78rem',color:'#b3e5fc',marginTop:4}}>Traži: {b.desired_type||'neodređeno'} {b.location ? `— ${b.location}` : ''}</div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <button onClick={dismissPopup} style={{width:'100%',marginTop:8,padding:'12px',background:'var(--gold)',color:'#000',border:'none',borderRadius:10,fontWeight:700,fontSize:'0.95rem',cursor:'pointer',fontFamily:'Cinzel,serif',letterSpacing:1}}>
+              ✓ RAZUMEM
+            </button>
+          </div>
+        </div>
+      )}
       {/* Stale Properties Alert (30+ days) */}
       {analytics?.staleProperties && analytics.staleProperties.length > 0 && (
         <div style={{marginBottom:24,background:'rgba(255,152,0,0.08)',border:'1px solid rgba(255,152,0,0.2)',borderRadius:12,padding:'16px 20px'}}>
