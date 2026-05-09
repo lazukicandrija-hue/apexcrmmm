@@ -256,8 +256,8 @@ a:hover { color: var(--gold-light); }
 
 .sidebar {
   width: var(--sidebar-width);
-  background: var(--gray-900);
-  border-right: 1px solid rgba(212, 175, 55, 0.1);
+  background: linear-gradient(180deg, rgba(212,175,55,0.06) 0%, rgba(212,175,55,0.02) 30%, var(--gray-900) 70%);
+  border-right: 1px solid rgba(212, 175, 55, 0.15);
   position: fixed;
   top: 0;
   left: 0;
