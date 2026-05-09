@@ -79,29 +79,58 @@ function PropertiesPageInner() {
 
   const showToast = (msg:string, type='success') => { setToast({msg,type}); setTimeout(()=>setToast(null), 3000); };
 
+  const [submitting, setSubmitting] = useState(false);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting) return;
+
+    // ── Manual validation (native required attrs fail silently in scrollable modals) ──
+    if (!form.title.trim()) { showToast('Unesite naslov nekretnine','error'); return; }
+    if (!form.location) { showToast('Izaberite lokaciju','error'); return; }
+    if (!form.price || isNaN(Number(form.price)) || Number(form.price) <= 0) { showToast('Unesite validnu cenu','error'); return; }
+
     let ownerId = form.owner_id;
 
     if (form.createNewOwner) {
-      const res = await fetch('/api/owners', {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({first_name:form.newOwnerFirst,last_name:form.newOwnerLast,phone:form.newOwnerPhone,email:form.newOwnerEmail,notes:form.newOwnerNotes})
-      });
-      const d = await res.json();
-      if (!res.ok) { showToast(d.error,'error'); return; }
-      ownerId = d.id;
+      if (!form.newOwnerFirst.trim() || !form.newOwnerLast.trim()) {
+        showToast('Unesite ime i prezime vlasnika','error'); return;
+      }
+      setSubmitting(true);
+      try {
+        const res = await fetch('/api/owners', {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({first_name:form.newOwnerFirst,last_name:form.newOwnerLast,phone:form.newOwnerPhone,email:form.newOwnerEmail,notes:form.newOwnerNotes})
+        });
+        const d = await res.json();
+        if (!res.ok) { showToast(d.error||'Greška pri kreiranju vlasnika','error'); setSubmitting(false); return; }
+        ownerId = d.id;
+      } catch {
+        showToast('Greška pri kreiranju vlasnika','error'); setSubmitting(false); return;
+      }
     }
 
     if (!ownerId) { showToast('Izaberite vlasnika','error'); return; }
 
-    const res = await fetch('/api/properties', {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({...form, price:Number(form.price), area:Number(form.area)||null, rooms:Number(form.rooms)||null, owner_id:ownerId, images:[], project_id:form.project_id||null})
-    });
-    if (res.ok) { showToast('Nekretnina kreirana!'); setShowModal(false); load();
-      setForm({title:'',description:'',location:'',price:'',type:category || 'Novogradnja',area:'',rooms:'',status:'Aktivna',owner_id:'',newOwnerFirst:'',newOwnerLast:'',newOwnerPhone:'',newOwnerEmail:'',newOwnerNotes:'',createNewOwner:false,floor:'',condition:'',parking:'',terrace:'',heating:'',street:'',building_number:'',apartment_number:'',project_id:''});
-    } else { const d = await res.json(); showToast(d.error||'Greška','error'); }
+    setSubmitting(true);
+    try {
+      const res = await fetch('/api/properties', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({...form, price:Number(form.price), area:Number(form.area)||null, rooms:Number(form.rooms)||null, owner_id:ownerId, images:[], project_id:form.project_id||null})
+      });
+      if (res.ok) {
+        showToast('Nekretnina kreirana!');
+        setShowModal(false);
+        load();
+        setForm({title:'',description:'',location:'',price:'',type:category || 'Novogradnja',area:'',rooms:'',status:'Aktivna',owner_id:'',newOwnerFirst:'',newOwnerLast:'',newOwnerPhone:'',newOwnerEmail:'',newOwnerNotes:'',createNewOwner:false,floor:'',condition:'',parking:'',terrace:'',heating:'',street:'',building_number:'',apartment_number:'',project_id:''});
+      } else {
+        const d = await res.json();
+        showToast(d.error||'Greška pri kreiranju nekretnine','error');
+      }
+    } catch {
+      showToast('Greška pri komunikaciji sa serverom','error');
+    }
+    setSubmitting(false);
   };
 
   const togglePublish = async (id:string) => {
@@ -292,23 +321,23 @@ function PropertiesPageInner() {
               <div className="modal-title">Nova {pageTitle === 'Rente' ? 'Renta' : 'Nekretnina'}{category ? ` — ${pageTitle}` : ''}</div>
               <button className="modal-close" onClick={()=>setShowModal(false)}>×</button>
             </div>
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handleSubmit} noValidate>
               <div className="modal-body">
                 <div className="form-group">
                   <label>Naslov *</label>
-                  <input className="form-input" required value={form.title} onChange={e=>setForm({...form,title:e.target.value})} placeholder={isRente ? 'Npr. Garsonjera — Grbavica' : 'Npr. Trosoban Stan — Centar'} />
+                  <input className="form-input" value={form.title} onChange={e=>setForm({...form,title:e.target.value})} placeholder={isRente ? 'Npr. Garsonjera — Grbavica' : 'Npr. Trosoban Stan — Centar'} />
                 </div>
                 <div className="form-row">
                   <div className="form-group">
                     <label>Lokacija *</label>
-                    <select className="form-select" required value={form.location} onChange={e=>setForm({...form,location:e.target.value})}>
+                    <select className="form-select" value={form.location} onChange={e=>setForm({...form,location:e.target.value})}>
                       <option value="">Izaberite deo grada</option>
                       {NOVI_SAD_LOKACIJE.map(l=><option key={l} value={l}>{l}</option>)}
                     </select>
                   </div>
                   <div className="form-group">
                     <label>{isRente ? 'Mesečna Cena (€) *' : 'Cena (€) *'}</label>
-                    <input className="form-input" type="number" required value={form.price} onChange={e=>setForm({...form,price:e.target.value})} />
+                    <input className="form-input" type="number" value={form.price} onChange={e=>setForm({...form,price:e.target.value})} />
                   </div>
                 </div>
                 <div className="form-row">
@@ -409,7 +438,7 @@ function PropertiesPageInner() {
 
                   {!form.createNewOwner ? (
                     <div className="form-group">
-                      <select className="form-select" value={form.owner_id} onChange={e=>setForm({...form,owner_id:e.target.value})} required>
+                      <select className="form-select" value={form.owner_id} onChange={e=>setForm({...form,owner_id:e.target.value})}>
                         <option value="">Izaberite vlasnika</option>
                         {owners.map(o=><option key={o.id} value={o.id}>{o.first_name} {o.last_name} — {o.phone}</option>)}
                       </select>
@@ -417,8 +446,8 @@ function PropertiesPageInner() {
                   ) : (
                     <>
                       <div className="form-row">
-                        <div className="form-group"><label>Ime *</label><input className="form-input" required value={form.newOwnerFirst} onChange={e=>setForm({...form,newOwnerFirst:e.target.value})} /></div>
-                        <div className="form-group"><label>Prezime *</label><input className="form-input" required value={form.newOwnerLast} onChange={e=>setForm({...form,newOwnerLast:e.target.value})} /></div>
+                        <div className="form-group"><label>Ime *</label><input className="form-input" value={form.newOwnerFirst} onChange={e=>setForm({...form,newOwnerFirst:e.target.value})} /></div>
+                        <div className="form-group"><label>Prezime *</label><input className="form-input" value={form.newOwnerLast} onChange={e=>setForm({...form,newOwnerLast:e.target.value})} /></div>
                       </div>
                       <div className="form-row">
                         <div className="form-group"><label>Telefon</label><input className="form-input" value={form.newOwnerPhone} onChange={e=>setForm({...form,newOwnerPhone:e.target.value})} /></div>
@@ -431,7 +460,7 @@ function PropertiesPageInner() {
               </div>
               <div className="modal-footer">
                 <button type="button" className="btn-outline" onClick={()=>setShowModal(false)}>Otkaži</button>
-                <button type="submit" className="btn-gold">Kreiraj</button>
+                <button type="submit" className="btn-gold" disabled={submitting}>{submitting ? '⏳ Kreiranje...' : 'Kreiraj'}</button>
               </div>
             </form>
           </div>

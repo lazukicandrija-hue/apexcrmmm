@@ -141,9 +141,19 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
   };
 
   const saveReminder = async () => {
+    if (!property) return;
     await fetch(`/api/properties/${id}`, {
       method:'PUT', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({...property, reminder_text:reminderText, images:propertyImages, contract_signed:contractSigned?1:0})
+      body: JSON.stringify({
+        title: property.title, description: property.description, location: property.location,
+        price: property.price, type: property.type, area: property.area, rooms: property.rooms,
+        status: property.status, owner_id: property.owner_id, images: propertyImages,
+        published: property.published, floor: property.floor, condition: property.condition,
+        parking: property.parking, terrace: property.terrace, heating: property.heating,
+        cadastral_notes: cadastralNotes, contract_signed: contractSigned ? 1 : 0,
+        reminder_text: reminderText, street: property.street, building_number: property.building_number,
+        apartment_number: property.apartment_number,
+      })
     });
     showToast('Podsetnik sačuvan ✓');
   };
