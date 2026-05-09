@@ -17,6 +17,18 @@ interface BuyerMatch { buyer:{id:string;first_name:string;last_name:string;phone
 interface Owner { id:string; first_name:string; last_name:string; phone:string; }
 interface AdListing { id:string; platform:string; status:string; external_url:string; last_synced_at:string; }
 
+const NOVI_SAD_LOKACIJE = [
+  'Centar','Stari Grad','Liman I','Liman II','Liman III','Liman IV',
+  'Grbavica','Novo Naselje','Telep','Detelinara','Podbara','Rotkvarija',
+  'Sajmi\u0161te','Salajka','Petrovaradin','Sremska Kamenica',
+  'Adamovi\u0107evo Naselje','Satelit','Klisa','Veternik','Futog',
+  'Adice','Avijati\u010darsko Naselje','Vidovdansko Naselje','Bistrica','Banatic',
+  '\u0160angaj','Somborski Bulevar','Bulevar Oslobo\u0111enja',
+  'Kej','Riblja Pijaca','\u0160arengrad','Karadjordjevo','Slana Bara',
+  'Industrijska Zona','Rimski \u0160an\u010devi','Stepanovi\u0107evo','\u010cenej',
+  'Kovilj','Bege\u010d','Ledinci','Paragovo','Popovica','Bukovac',
+];
+
 export default function PropertyDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
@@ -332,7 +344,7 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
             {editMode ? (<>
               <div className="form-group" style={{marginBottom:12}}><label>Naslov</label><input className="form-input" value={editForm.title||''} onChange={e=>setEditForm({...editForm,title:e.target.value})} /></div>
               <div className="form-row">
-                <div className="form-group"><label>Lokacija</label><input className="form-input" value={editForm.location||''} onChange={e=>setEditForm({...editForm,location:e.target.value})} /></div>
+                <div className="form-group"><label>Lokacija</label><select className="form-select" value={editForm.location||''} onChange={e=>setEditForm({...editForm,location:e.target.value})}><option value="">Izaberite deo grada</option>{NOVI_SAD_LOKACIJE.map(l=><option key={l} value={l}>{l}</option>)}</select></div>
                 <div className="form-group"><label>Cena (€)</label><input className="form-input" type="number" value={editForm.price||''} onChange={e=>setEditForm({...editForm,price:e.target.value})} /></div>
               </div>
               <div className="form-row">

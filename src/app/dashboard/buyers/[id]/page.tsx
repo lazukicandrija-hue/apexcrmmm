@@ -13,10 +13,15 @@ interface NoteEntry { id:string; content:string; created_at:string; }
 interface PropertyMatch { property:{id:string;title:string;location:string;price:number;type:string;area:number;rooms:number;}; score:number; reasons:string[]; }
 
 const NOVI_SAD_LOKACIJE = [
-  'Centar','Liman I','Liman II','Liman III','Liman IV','Grbavica','Novo Naselje',
-  'Telep','Detelinara','Podbara','Rotkvarija','Sajmište','Salajka','Petrovaradin',
-  'Sremska Kamenica','Adamovićevo Naselje','Satelit','Klisa','Veternik','Futog',
+  'Centar','Stari Grad','Liman I','Liman II','Liman III','Liman IV',
+  'Grbavica','Novo Naselje','Telep','Detelinara','Podbara','Rotkvarija',
+  'Sajmište','Salajka','Petrovaradin','Sremska Kamenica',
+  'Adamovićevo Naselje','Satelit','Klisa','Veternik','Futog',
   'Adice','Avijatičarsko Naselje','Vidovdansko Naselje','Bistrica','Banatic',
+  'Šangaj','Somborski Bulevar','Bulevar Oslobođenja',
+  'Kej','Riblja Pijaca','Šarengrad','Karadjordjevo','Slana Bara',
+  'Industrijska Zona','Rimski Šančevi','Stepanovićevo','Čenej',
+  'Kovilj','Begeč','Ledinci','Paragovo','Popovica','Bukovac',
 ];
 
 export default function BuyerDetailPage({ params }: { params: Promise<{ id: string }> }) {

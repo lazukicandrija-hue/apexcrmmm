@@ -17,6 +17,18 @@ const CATEGORY_LABELS: Record<string, string> = {
   'Rente': 'Rente',
 };
 
+const NOVI_SAD_LOKACIJE = [
+  'Centar','Stari Grad','Liman I','Liman II','Liman III','Liman IV',
+  'Grbavica','Novo Naselje','Telep','Detelinara','Podbara','Rotkvarija',
+  'Sajmište','Salajka','Petrovaradin','Sremska Kamenica',
+  'Adamovićevo Naselje','Satelit','Klisa','Veternik','Futog',
+  'Adice','Avijatičarsko Naselje','Vidovdansko Naselje','Bistrica','Banatic',
+  'Šangaj','Somborski Bulevar','Bulevar Oslobođenja',
+  'Kej','Riblja Pijaca','Šarengrad','Karadjordjevo','Slana Bara',
+  'Industrijska Zona','Rimski Šančevi','Stepanovićevo','Čenej',
+  'Kovilj','Begeč','Ledinci','Paragovo','Popovica','Bukovac',
+];
+
 function PropertiesPageInner() {
   const searchParams = useSearchParams();
   const category = searchParams.get('category') || '';
@@ -27,7 +39,7 @@ function PropertiesPageInner() {
   const [filterStatus, setFilterStatus] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [advFilters, setAdvFilters] = useState({minPrice:'',maxPrice:'',minRooms:'',maxRooms:'',minArea:'',maxArea:'',floor:'',parking:'',heating:'',terrace:'',owner:''});
+  const [advFilters, setAdvFilters] = useState({minPrice:'',maxPrice:'',minRooms:'',maxRooms:'',minArea:'',maxArea:'',floor:'',parking:'',heating:'',terrace:'',owner:'',location:''});
   const [toast, setToast] = useState<{msg:string;type:string}|null>(null);
   const [form, setForm] = useState({
     title:'',description:'',location:'',price:'',type:category || 'Novogradnja',area:'',rooms:'',
@@ -133,7 +145,8 @@ function PropertiesPageInner() {
             <div><label style={{fontSize:'0.72rem',color:'var(--gray-300)',display:'block',marginBottom:4}}>Grejanje</label><select className="form-select" value={advFilters.heating} onChange={e=>setAdvFilters({...advFilters,heating:e.target.value})} style={{padding:'6px 10px',fontSize:'0.82rem'}}><option value="">Svi</option><option>Centralno</option><option>Etažno</option><option>Gas</option><option>Klima</option></select></div>
             <div><label style={{fontSize:'0.72rem',color:'var(--gray-300)',display:'block',marginBottom:4}}>Terasa</label><select className="form-select" value={advFilters.terrace} onChange={e=>setAdvFilters({...advFilters,terrace:e.target.value})} style={{padding:'6px 10px',fontSize:'0.82rem'}}><option value="">Svi</option><option>Da</option><option>Nema</option></select></div>
             <div><label style={{fontSize:'0.72rem',color:'var(--gray-300)',display:'block',marginBottom:4}}>Vlasnik</label><input className="form-input" placeholder="Ime ili prezime" value={advFilters.owner} onChange={e=>setAdvFilters({...advFilters,owner:e.target.value})} style={{padding:'6px 10px',fontSize:'0.82rem'}} /></div>
-            <div style={{display:'flex',alignItems:'flex-end'}}><button className="btn-outline btn-sm" onClick={()=>setAdvFilters({minPrice:'',maxPrice:'',minRooms:'',maxRooms:'',minArea:'',maxArea:'',floor:'',parking:'',heating:'',terrace:'',owner:''})}>✕ Resetuj</button></div>
+            <div><label style={{fontSize:'0.72rem',color:'var(--gray-300)',display:'block',marginBottom:4}}>Lokacija</label><select className="form-select" value={advFilters.location} onChange={e=>setAdvFilters({...advFilters,location:e.target.value})} style={{padding:'6px 10px',fontSize:'0.82rem'}}><option value="">Sve</option>{NOVI_SAD_LOKACIJE.map(l=><option key={l}>{l}</option>)}</select></div>
+            <div style={{display:'flex',alignItems:'flex-end'}}><button className="btn-outline btn-sm" onClick={()=>setAdvFilters({minPrice:'',maxPrice:'',minRooms:'',maxRooms:'',minArea:'',maxArea:'',floor:'',parking:'',heating:'',terrace:'',owner:'',location:''})}>✕ Resetuj</button></div>
           </div>
         )}
         <div className="table-overflow">
@@ -192,7 +205,10 @@ function PropertiesPageInner() {
                 <div className="form-row">
                   <div className="form-group">
                     <label>Lokacija *</label>
-                    <input className="form-input" required value={form.location} onChange={e=>setForm({...form,location:e.target.value})} placeholder="Centar, Novi Sad" />
+                    <select className="form-select" required value={form.location} onChange={e=>setForm({...form,location:e.target.value})}>
+                      <option value="">Izaberite deo grada</option>
+                      {NOVI_SAD_LOKACIJE.map(l=><option key={l} value={l}>{l}</option>)}
+                    </select>
                   </div>
                   <div className="form-group">
                     <label>{isRente ? 'Mesečna Cena (€) *' : 'Cena (€) *'}</label>
