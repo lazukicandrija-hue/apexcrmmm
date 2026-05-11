@@ -411,7 +411,7 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
                 <div className="form-group"><label>Broj stana</label><input className="form-input" value={editForm.apartment_number||''} onChange={e=>setEditForm({...editForm,apartment_number:e.target.value})} placeholder="Npr. 12" /></div>
               </div>
               <div className="form-row">
-                <div className="form-group"><label>Tip</label><select className="form-select" value={editForm.type||''} onChange={e=>setEditForm({...editForm,type:e.target.value})}><option>Novogradnja</option><option>Starogradnja</option><option>Lokali</option><option>Rente</option></select></div>
+                <div className="form-group"><label>Tip</label><select className="form-select" value={editForm.type||''} onChange={e=>setEditForm({...editForm,type:e.target.value})}><option>Novogradnja</option><option>Starogradnja</option><option>Kuće</option><option>Lokali</option><option>Rente</option></select></div>
                 <div className="form-group"><label>Status</label><select className="form-select" value={editForm.status||''} onChange={e=>setEditForm({...editForm,status:e.target.value})}><option>Aktivna</option><option>Prodato</option><option>U pregovoru</option></select></div>
               </div>
               <div className="form-row">

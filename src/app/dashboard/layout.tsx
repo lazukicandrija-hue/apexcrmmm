@@ -6,7 +6,7 @@ import Link from 'next/link';
 interface User { id: string; username: string; full_name: string; role: string; }
 interface SearchResult { type:string; id:string; title:string; subtitle:string; badge:string; href:string; icon:string; }
 
-const PONUDA_TYPES = ['Novogradnja', 'Starogradnja', 'Lokali', 'Rente'];
+const PONUDA_TYPES = ['Novogradnja', 'Starogradnja', 'Kuće', 'Lokali', 'Rente'];
 
 function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -71,6 +71,7 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
       if (currentCategory === 'Rente') return 'Rente';
       if (currentCategory === 'Novogradnja') return 'Novogradnja';
       if (currentCategory === 'Starogradnja') return 'Starogradnja';
+      if (currentCategory === 'Kuće') return 'Kuće';
       if (currentCategory === 'Lokali') return 'Lokali';
       if (PONUDA_TYPES.some(t => t === currentCategory)) return currentCategory;
       return 'Ponuda';
@@ -124,6 +125,11 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
               className={`nav-item nav-sub ${isActive('/dashboard/properties?category=Lokali') ? 'active' : ''}`}
               onClick={() => setSidebarOpen(false)}>
               <span>🏪</span> Lokali
+            </Link>
+            <Link href="/dashboard/properties?category=Kuće"
+              className={`nav-item nav-sub ${isActive('/dashboard/properties?category=Kuće') ? 'active' : ''}`}
+              onClick={() => setSidebarOpen(false)}>
+              <span>🏡</span> Kuće
             </Link>
             <Link href="/dashboard/properties?category=Rente"
               className={`nav-item nav-sub ${isActive('/dashboard/properties?category=Rente') ? 'active' : ''}`}

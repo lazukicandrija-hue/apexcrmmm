@@ -361,7 +361,7 @@ function PropertiesPageInner() {
                   <div className="form-group">
                     <label>Tip</label>
                     <select className="form-select" value={form.type} onChange={e=>setForm({...form,type:e.target.value})}>
-                      <option>Novogradnja</option><option>Starogradnja</option><option>Lokali</option><option>Rente</option>
+                      <option>Novogradnja</option><option>Starogradnja</option><option>Kuće</option><option>Lokali</option><option>Rente</option>
                     </select>
                   </div>
                   <div className="form-group">
