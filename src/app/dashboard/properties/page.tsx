@@ -47,7 +47,7 @@ function PropertiesPageInner() {
   const [toast, setToast] = useState<{msg:string;type:string}|null>(null);
   const [form, setForm] = useState({
     title:'',description:'',location:'',price:'',type:category || 'Novogradnja',area:'',rooms:'',
-    status:'Aktivna',owner_id:'',newOwnerFirst:'',newOwnerLast:'',newOwnerPhone:'',
+    status:'Aktivna',owner_id:'',newOwnerName:'',newOwnerPhone:'',
     newOwnerEmail:'',newOwnerNotes:'',createNewOwner:true,
     floor:'',condition:'',parking:'',terrace:'',heating:'',
     street:'',building_number:'',apartment_number:'',project_id:''
@@ -93,14 +93,17 @@ function PropertiesPageInner() {
     let ownerId = form.owner_id;
 
     if (form.createNewOwner) {
-      if (!form.newOwnerFirst.trim() || !form.newOwnerLast.trim()) {
-        showToast('Unesite ime i prezime vlasnika','error'); return;
+      if (!form.newOwnerName.trim()) {
+        showToast('Unesite ime vlasnika','error'); return;
       }
+      const nameParts = form.newOwnerName.trim().split(/\s+/);
+      const firstName = nameParts[0];
+      const lastName = nameParts.slice(1).join(' ') || '';
       setSubmitting(true);
       try {
         const res = await fetch('/api/owners', {
           method:'POST', headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({first_name:form.newOwnerFirst,last_name:form.newOwnerLast,phone:form.newOwnerPhone,email:form.newOwnerEmail,notes:form.newOwnerNotes})
+          body: JSON.stringify({first_name:firstName,last_name:lastName,phone:form.newOwnerPhone,email:form.newOwnerEmail,notes:form.newOwnerNotes})
         });
         const d = await res.json();
         if (!res.ok) { showToast(d.error||'Greška pri kreiranju vlasnika','error'); setSubmitting(false); return; }
@@ -122,7 +125,7 @@ function PropertiesPageInner() {
         showToast('Nekretnina kreirana!');
         setShowModal(false);
         load();
-        setForm({title:'',description:'',location:'',price:'',type:category || 'Novogradnja',area:'',rooms:'',status:'Aktivna',owner_id:'',newOwnerFirst:'',newOwnerLast:'',newOwnerPhone:'',newOwnerEmail:'',newOwnerNotes:'',createNewOwner:true,floor:'',condition:'',parking:'',terrace:'',heating:'',street:'',building_number:'',apartment_number:'',project_id:''});
+        setForm({title:'',description:'',location:'',price:'',type:category || 'Novogradnja',area:'',rooms:'',status:'Aktivna',owner_id:'',newOwnerName:'',newOwnerPhone:'',newOwnerEmail:'',newOwnerNotes:'',createNewOwner:true,floor:'',condition:'',parking:'',terrace:'',heating:'',street:'',building_number:'',apartment_number:'',project_id:''});
       } else {
         const d = await res.json();
         showToast(d.error||'Greška pri kreiranju nekretnine','error');
@@ -438,10 +441,7 @@ function PropertiesPageInner() {
 
                   {form.createNewOwner ? (
                     <>
-                      <div className="form-row">
-                        <div className="form-group"><label>Ime *</label><input className="form-input" value={form.newOwnerFirst} onChange={e=>setForm({...form,newOwnerFirst:e.target.value})} /></div>
-                        <div className="form-group"><label>Prezime *</label><input className="form-input" value={form.newOwnerLast} onChange={e=>setForm({...form,newOwnerLast:e.target.value})} /></div>
-                      </div>
+                      <div className="form-group"><label>Ime i Prezime *</label><input className="form-input" value={form.newOwnerName} onChange={e=>setForm({...form,newOwnerName:e.target.value})} placeholder="Npr. Marko Marković" /></div>
                       <div className="form-row">
                         <div className="form-group"><label>Telefon</label><input className="form-input" value={form.newOwnerPhone} onChange={e=>setForm({...form,newOwnerPhone:e.target.value})} /></div>
                         <div className="form-group"><label>Email</label><input className="form-input" value={form.newOwnerEmail} onChange={e=>setForm({...form,newOwnerEmail:e.target.value})} /></div>
