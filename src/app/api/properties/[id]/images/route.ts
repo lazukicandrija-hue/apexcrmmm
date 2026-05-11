@@ -24,8 +24,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       return NextResponse.json({ error: 'No files uploaded' }, { status: 400 });
     }
 
-    // Create uploads directory
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'properties', id);
+    // Create uploads directory in persistent data dir (survives deployments)
+    const dataDir = process.env.DATA_DIR || path.join(process.cwd(), 'data');
+    const uploadDir = path.join(dataDir, 'uploads', 'properties', id);
     await mkdir(uploadDir, { recursive: true });
 
     const existingImages: string[] = JSON.parse(property.images || '[]');
@@ -83,7 +84,8 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
     // Try to delete the file (don't fail if it doesn't exist)
     try {
       const { unlink } = await import('fs/promises');
-      const fullPath = path.join(process.cwd(), 'public', imagePath);
+      const dataDir = process.env.DATA_DIR || path.join(process.cwd(), 'data');
+      const fullPath = path.join(dataDir, imagePath);
       await unlink(fullPath);
     } catch { /* file might not exist */ }
 
