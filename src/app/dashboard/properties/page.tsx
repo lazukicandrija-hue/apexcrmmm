@@ -48,7 +48,7 @@ function PropertiesPageInner() {
   const [form, setForm] = useState({
     title:'',description:'',location:'',price:'',type:category || 'Novogradnja',area:'',rooms:'',
     status:'Aktivna',owner_id:'',newOwnerFirst:'',newOwnerLast:'',newOwnerPhone:'',
-    newOwnerEmail:'',newOwnerNotes:'',createNewOwner:false,
+    newOwnerEmail:'',newOwnerNotes:'',createNewOwner:true,
     floor:'',condition:'',parking:'',terrace:'',heating:'',
     street:'',building_number:'',apartment_number:'',project_id:''
   });
@@ -122,7 +122,7 @@ function PropertiesPageInner() {
         showToast('Nekretnina kreirana!');
         setShowModal(false);
         load();
-        setForm({title:'',description:'',location:'',price:'',type:category || 'Novogradnja',area:'',rooms:'',status:'Aktivna',owner_id:'',newOwnerFirst:'',newOwnerLast:'',newOwnerPhone:'',newOwnerEmail:'',newOwnerNotes:'',createNewOwner:false,floor:'',condition:'',parking:'',terrace:'',heating:'',street:'',building_number:'',apartment_number:'',project_id:''});
+        setForm({title:'',description:'',location:'',price:'',type:category || 'Novogradnja',area:'',rooms:'',status:'Aktivna',owner_id:'',newOwnerFirst:'',newOwnerLast:'',newOwnerPhone:'',newOwnerEmail:'',newOwnerNotes:'',createNewOwner:true,floor:'',condition:'',parking:'',terrace:'',heating:'',street:'',building_number:'',apartment_number:'',project_id:''});
       } else {
         const d = await res.json();
         showToast(d.error||'Greška pri kreiranju nekretnine','error');
@@ -432,18 +432,11 @@ function PropertiesPageInner() {
                   <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
                     <label style={{color:'var(--gold)',fontFamily:'Cinzel,serif',fontSize:'0.95rem'}}>Vlasnik</label>
                     <button type="button" className="btn-outline btn-sm" onClick={()=>setForm({...form,createNewOwner:!form.createNewOwner})}>
-                      {form.createNewOwner ? 'Izaberi Postojećeg' : '+ Novi Vlasnik'}
+                      {form.createNewOwner ? 'Izaberi Postojećeg' : 'Upiši Ručno'}
                     </button>
                   </div>
 
-                  {!form.createNewOwner ? (
-                    <div className="form-group">
-                      <select className="form-select" value={form.owner_id} onChange={e=>setForm({...form,owner_id:e.target.value})}>
-                        <option value="">Izaberite vlasnika</option>
-                        {owners.map(o=><option key={o.id} value={o.id}>{o.first_name} {o.last_name} — {o.phone}</option>)}
-                      </select>
-                    </div>
-                  ) : (
+                  {form.createNewOwner ? (
                     <>
                       <div className="form-row">
                         <div className="form-group"><label>Ime *</label><input className="form-input" value={form.newOwnerFirst} onChange={e=>setForm({...form,newOwnerFirst:e.target.value})} /></div>
@@ -455,6 +448,13 @@ function PropertiesPageInner() {
                       </div>
                       <div className="form-group"><label>Napomene</label><textarea className="form-textarea" value={form.newOwnerNotes} onChange={e=>setForm({...form,newOwnerNotes:e.target.value})} /></div>
                     </>
+                  ) : (
+                    <div className="form-group">
+                      <select className="form-select" value={form.owner_id} onChange={e=>setForm({...form,owner_id:e.target.value})}>
+                        <option value="">Izaberite vlasnika</option>
+                        {owners.map(o=><option key={o.id} value={o.id}>{o.first_name} {o.last_name} — {o.phone}</option>)}
+                      </select>
+                    </div>
                   )}
                 </div>
               </div>
