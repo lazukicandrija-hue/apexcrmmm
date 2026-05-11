@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 interface Property {
-  id:string; code:string; title:string; description:string; notes:string; location:string; price:number; type:string;
+  id:string; code:string; title:string; description:string; website_description:string; notes:string; location:string; price:number; type:string;
   area:number; rooms:number; status:string; published:number; images:string; next_action_date:string;
   owner_first_name:string; owner_last_name:string; owner_phone:string; owner_email:string; owner_notes:string;
   owner_id:string; created_at:string; updated_at:string;
@@ -63,6 +63,8 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
   const [dragIdx, setDragIdx] = useState<number|null>(null);
   // Reminder
   const [reminderText, setReminderText] = useState('');
+  const [websiteDesc, setWebsiteDesc] = useState('');
+  const [savingWebDesc, setSavingWebDesc] = useState(false);
 
   const load = () => {
     fetch(`/api/properties/${id}`).then(r=>r.json()).then(d=>{
@@ -73,6 +75,7 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
         setCadastralNotes(d.property.cadastral_notes || '');
         setContractSigned(!!d.property.contract_signed);
         setReminderText(d.property.reminder_text || '');
+        setWebsiteDesc(d.property.website_description || '');
         fetch(`/api/notes?entity_type=property&entity_id=${d.property.id}`).then(r=>r.json()).then(n=>setPropNotes(n.notes||[]));
         fetch(`/api/notes?entity_type=owner&entity_id=${d.property.owner_id}`).then(r=>r.json()).then(n=>setOwnerNotes(n.notes||[]));
         fetch(`/api/properties/${id}/audit`).then(r=>r.json()).then(a=>setAuditLog(a.logs||[]));
@@ -99,7 +102,7 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
     // Save property
     const res = await fetch(`/api/properties/${id}`, {
       method:'PUT', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({...editForm, price:Number(editForm.price), area:Number(editForm.area)||null, rooms:Number(editForm.rooms)||null, images:propertyImages, published:property!.published, cadastral_notes:cadastralNotes, contract_signed:contractSigned?1:0, reminder_text:reminderText})
+      body: JSON.stringify({...editForm, price:Number(editForm.price), area:Number(editForm.area)||null, rooms:Number(editForm.rooms)||null, images:propertyImages, published:property!.published, cadastral_notes:cadastralNotes, contract_signed:contractSigned?1:0, reminder_text:reminderText, website_description:websiteDesc})
     });
     // Save owner changes too
     await fetch(`/api/owners/${property!.owner_id}`, {
@@ -152,7 +155,7 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
         parking: property.parking, terrace: property.terrace, heating: property.heating,
         cadastral_notes: cadastralNotes, contract_signed: contractSigned ? 1 : 0,
         reminder_text: reminderText, street: property.street, building_number: property.building_number,
-        apartment_number: property.apartment_number,
+        apartment_number: property.apartment_number, website_description: websiteDesc,
       })
     });
     showToast('Podsetnik sačuvan ✓');
@@ -351,6 +354,47 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
             </div>
             <input ref={fileInputRef} type="file" multiple accept="image/*" style={{display:'none'}}
               onChange={e => handleImageUpload(e.target.files)} />
+          </div>
+
+          {/* Website Description */}
+          <div className="detail-card" style={{marginBottom:20}}>
+            <div className="detail-card-title">🌐 Opis Nekretnine za Sajt</div>
+            <p style={{fontSize:'0.75rem',color:'var(--gray-300)',margin:'-8px 0 12px'}}>Ovaj opis će se prikazivati na javnom sajtu apexrealestate.rs</p>
+            <textarea
+              className="form-textarea"
+              value={websiteDesc}
+              onChange={e => setWebsiteDesc(e.target.value)}
+              placeholder="Upišite detaljan opis nekretnine koji će biti vidljiv na sajtu... npr. 'Prostran dvosoban stan u mirnoj ulici na Sajmištu. Renoviran 2024. godine sa kvalitetnim materijalima. Idealan za mlade parove ili investiciju.'"
+              style={{minHeight:100,marginBottom:10}}
+            />
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+              <span style={{fontSize:'0.75rem',color:'var(--gray-300)'}}>{websiteDesc.length > 0 ? `${websiteDesc.length} karaktera` : 'Nema opisa'}</span>
+              <button
+                className="btn-gold btn-sm"
+                onClick={async () => {
+                  setSavingWebDesc(true);
+                  await fetch(`/api/properties/${id}`, {
+                    method:'PUT', headers:{'Content-Type':'application/json'},
+                    body: JSON.stringify({
+                      title: property.title, description: property.description, location: property.location,
+                      price: property.price, type: property.type, area: property.area, rooms: property.rooms,
+                      status: property.status, owner_id: property.owner_id, images: propertyImages,
+                      published: property.published, floor: property.floor, condition: property.condition,
+                      parking: property.parking, terrace: property.terrace, heating: property.heating,
+                      cadastral_notes: cadastralNotes, contract_signed: contractSigned ? 1 : 0,
+                      reminder_text: reminderText, street: property.street, building_number: property.building_number,
+                      apartment_number: property.apartment_number, website_description: websiteDesc,
+                    })
+                  });
+                  setSavingWebDesc(false);
+                  showToast('Opis za sajt sačuvan ✓');
+                }}
+                disabled={savingWebDesc}
+                style={{opacity: savingWebDesc ? 0.6 : 1}}
+              >
+                {savingWebDesc ? 'Čuvanje...' : '💾 Sačuvaj Opis za Sajt'}
+              </button>
+            </div>
           </div>
 
           <div className="detail-card" style={{marginBottom:20}}>
