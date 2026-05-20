@@ -111,8 +111,8 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
           </button>
 
           <div className={`nav-group ${ponudaOpen ? 'open' : ''}`}>
-            <Link href="/dashboard/properties"
-              className={`nav-item nav-sub ${isActive('/dashboard/properties') ? 'active' : ''}`}
+            <Link href="/dashboard/properties?category="
+              className={`nav-item nav-sub ${isActive('/dashboard/properties?category=') ? 'active' : ''}`}
               onClick={() => setSidebarOpen(false)}>
               <span>📋</span> Sve Nekretnine
             </Link>
