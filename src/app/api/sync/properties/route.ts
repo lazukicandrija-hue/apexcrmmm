@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/db/database';
 
+export const dynamic = 'force-dynamic';
+
 // Public endpoint - no auth needed (for website integration)
 // ONLY exposes safe, public-facing property data
 const CRM_BASE = 'https://crm.apexrealestate.rs';
@@ -44,7 +46,7 @@ export async function GET() {
   }, {
     headers: {
       'Access-Control-Allow-Origin': '*',
-      'Cache-Control': 'public, max-age=300',
+      'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
     },
   });
 }

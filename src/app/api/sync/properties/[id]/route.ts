@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/db/database';
 
+export const dynamic = 'force-dynamic';
+
 // Public endpoint - get single published property by ID (for website)
 // NO auth required, NO private data exposed
 const CRM_BASE = 'https://crm.apexrealestate.rs';
@@ -42,7 +44,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   return NextResponse.json({ property: formatted }, {
     headers: {
       'Access-Control-Allow-Origin': '*',
-      'Cache-Control': 'public, max-age=300',
+      'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
     },
   });
 }
