@@ -168,6 +168,7 @@ function initializeSchema(database: Database.Database) {
   addColumnSafe('properties', 'reminder_text', 'TEXT');
   addColumnSafe('properties', 'code', 'TEXT');              // Šifra oglasa: n001, s001, l001, r001
   addColumnSafe('properties', 'project_id', 'TEXT');        // FK to projects (nullable, for Novogradnja)
+  addColumnSafe('properties', 'featured_order', 'INTEGER');  // Redosled na sajtu: NULL = nije istaknut, broj = pozicija (manji = viši na stranici)
 
   // Migrate: add new buyer fields
   addColumnSafe('buyers', 'financing', 'TEXT');         // Keš, Kredit, Kombinovano

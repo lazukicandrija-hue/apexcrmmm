@@ -7,6 +7,7 @@ interface Property {
   id:string; code:string; title:string; location:string; price:number; type:string; area:number;
   rooms:number; status:string; published:number; owner_first_name:string; owner_last_name:string;
   owner_phone:string; created_at:string; contract_signed:number; project_id:string|null;
+  featured_order:number|null;
 }
 interface Owner { id:string; first_name:string; last_name:string; phone:string; email:string; }
 interface Project { id:string; name:string; location:string; description:string; developer:string; total_units:number; unit_count:number; sold_count:number; }
@@ -141,13 +142,49 @@ function PropertiesPageInner() {
     if (res.ok) { const d = await res.json(); showToast(d.message); load(); }
   };
 
+  const toggleFeatured = async (id:string) => {
+    const res = await fetch(`/api/properties/${id}/featured`, {method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'});
+    if (res.ok) { const d = await res.json(); showToast(d.message); load(); loadFeatured(); }
+  };
+
   const handleDelete = async (id:string) => {
     if (!confirm('Obrisati nekretninu?')) return;
     await fetch(`/api/properties/${id}`, {method:'DELETE'});
-    showToast('Nekretnina obrisana'); load();
+    showToast('Nekretnina obrisana'); load(); loadFeatured();
   };
 
   const formatPrice = (p:number) => p >= 1000 ? `€${p.toLocaleString('sr-RS')}` : `€${p}/mes`;
+
+  // Featured properties management
+  const [featuredList, setFeaturedList] = useState<Property[]>([]);
+  const [showFeatured, setShowFeatured] = useState(false);
+
+  const loadFeatured = useCallback(() => {
+    fetch('/api/properties/featured').then(r=>r.json()).then(d=>setFeaturedList(d.featured||[]));
+  }, []);
+
+  useEffect(() => { loadFeatured(); }, [loadFeatured]);
+
+  const moveFeatured = async (index: number, direction: 'up'|'down') => {
+    const newList = [...featuredList];
+    const swapIdx = direction === 'up' ? index - 1 : index + 1;
+    if (swapIdx < 0 || swapIdx >= newList.length) return;
+    [newList[index], newList[swapIdx]] = [newList[swapIdx], newList[index]];
+    setFeaturedList(newList);
+    const res = await fetch('/api/properties/featured', {
+      method:'PUT', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ order: newList.map(p => p.id) })
+    });
+    if (res.ok) { showToast('Redosled ažuriran'); load(); }
+  };
+
+  const removeFeatured = async (id: string) => {
+    await fetch(`/api/properties/${id}/featured`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ featured_order: null })
+    });
+    showToast('Uklonjeno sa istaknutih'); load(); loadFeatured();
+  };
 
   const handleProjectSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -198,6 +235,7 @@ function PropertiesPageInner() {
               <option>Aktivna</option><option>Prodato</option><option>U pregovoru</option>
             </select>
             <button className="btn-outline btn-sm" onClick={()=>setShowAdvanced(!showAdvanced)}>🔍 {showAdvanced?'Sakrij':'Filteri'}</button>
+            <button className="btn-outline btn-sm" onClick={()=>setShowFeatured(!showFeatured)} style={{borderColor: featuredList.length > 0 ? 'rgba(212,175,55,0.6)' : undefined}}>⭐ Istaknuti ({featuredList.length})</button>
             <a href="/api/export/properties" className="btn-outline btn-sm">📥 CSV</a>
             {isNovogradnja && <button className="btn-outline btn-sm" onClick={()=>setShowProjectModal(true)} style={{borderColor:'rgba(212,175,55,0.4)'}}>🏗️ + Projekat</button>}
             <button className="btn-gold btn-sm" onClick={()=>setShowModal(true)}>+ Dodaj Stan</button>
@@ -218,6 +256,35 @@ function PropertiesPageInner() {
             <div><label style={{fontSize:'0.72rem',color:'var(--gray-300)',display:'block',marginBottom:4}}>Vlasnik</label><input className="form-input" placeholder="Ime ili prezime" value={advFilters.owner} onChange={e=>setAdvFilters({...advFilters,owner:e.target.value})} style={{padding:'6px 10px',fontSize:'0.82rem'}} /></div>
             <div><label style={{fontSize:'0.72rem',color:'var(--gray-300)',display:'block',marginBottom:4}}>Lokacija</label><select className="form-select" value={advFilters.location} onChange={e=>setAdvFilters({...advFilters,location:e.target.value})} style={{padding:'6px 10px',fontSize:'0.82rem'}}><option value="">Sve</option>{NOVI_SAD_LOKACIJE.map(l=><option key={l}>{l}</option>)}</select></div>
             <div style={{display:'flex',alignItems:'flex-end'}}><button className="btn-outline btn-sm" onClick={()=>setAdvFilters({minPrice:'',maxPrice:'',minRooms:'',maxRooms:'',minArea:'',maxArea:'',floor:'',parking:'',heating:'',terrace:'',owner:'',location:''})}>✕ Resetuj</button></div>
+          </div>
+        )}
+        {/* Featured Properties Management Panel */}
+        {showFeatured && (
+          <div style={{background:'rgba(212,175,55,0.06)',border:'1px solid rgba(212,175,55,0.2)',borderRadius:12,padding:16,marginBottom:16}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
+              <div style={{fontFamily:'Cinzel,serif',fontSize:'0.95rem',color:'var(--gold)',fontWeight:600}}>⭐ Istaknuti Oglasi — Redosled na Sajtu</div>
+              <div style={{fontSize:'0.75rem',color:'var(--gray-300)'}}>Oglasi označeni zvezdicom se prikazuju prvi na sajtu. Koristite strelice za promenu redosleda.</div>
+            </div>
+            {featuredList.length === 0 ? (
+              <div style={{textAlign:'center',padding:20,color:'var(--gray-300)',fontSize:'0.85rem'}}>Nema istaknutih oglasa. Kliknite ⭐ u tabeli da istaknete oglas.</div>
+            ) : (
+              <div style={{display:'flex',flexDirection:'column',gap:6}}>
+                {featuredList.map((fp, idx) => (
+                  <div key={fp.id} style={{display:'flex',alignItems:'center',gap:10,padding:'8px 12px',background:'rgba(0,0,0,0.3)',borderRadius:8,border:'1px solid rgba(212,175,55,0.1)'}}>
+                    <span style={{color:'var(--gold)',fontWeight:700,fontSize:'0.85rem',minWidth:24,textAlign:'center'}}>{idx+1}.</span>
+                    <span style={{color:'var(--gold)',fontFamily:'monospace',fontSize:'0.78rem',background:'rgba(212,175,55,0.1)',padding:'2px 6px',borderRadius:4}}>{fp.code}</span>
+                    <span style={{flex:1,fontWeight:500,fontSize:'0.88rem'}}>{fp.title}</span>
+                    <span style={{color:'var(--gray-300)',fontSize:'0.78rem'}}>{fp.location}</span>
+                    <span style={{color:'var(--gold)',fontWeight:600,fontSize:'0.82rem'}}>{fp.price >= 1000 ? `€${fp.price.toLocaleString('sr-RS')}` : `€${fp.price}/mes`}</span>
+                    <div style={{display:'flex',gap:4}}>
+                      <button onClick={()=>moveFeatured(idx,'up')} disabled={idx===0} style={{background:'rgba(212,175,55,0.1)',border:'1px solid rgba(212,175,55,0.2)',borderRadius:6,padding:'4px 8px',cursor:idx===0?'not-allowed':'pointer',opacity:idx===0?0.3:1,color:'var(--gold)',fontSize:'0.78rem'}}>▲</button>
+                      <button onClick={()=>moveFeatured(idx,'down')} disabled={idx===featuredList.length-1} style={{background:'rgba(212,175,55,0.1)',border:'1px solid rgba(212,175,55,0.2)',borderRadius:6,padding:'4px 8px',cursor:idx===featuredList.length-1?'not-allowed':'pointer',opacity:idx===featuredList.length-1?0.3:1,color:'var(--gold)',fontSize:'0.78rem'}}>▼</button>
+                      <button onClick={()=>removeFeatured(fp.id)} style={{background:'rgba(239,68,68,0.1)',border:'1px solid rgba(239,68,68,0.2)',borderRadius:6,padding:'4px 8px',cursor:'pointer',color:'#ef4444',fontSize:'0.78rem'}}>✕</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
         {/* Novogradnja: Project Groups */}
@@ -249,7 +316,7 @@ function PropertiesPageInner() {
                   {isExpanded && (
                     <div style={{borderTop:'1px solid rgba(212,175,55,0.1)',padding:'0'}}>
                       <table className="data-table" style={{marginBottom:0}}>
-                        <thead><tr><th>Naslov</th><th>Lokacija</th><th>Cena</th><th>m²</th><th>Status</th><th>Ugovor</th><th>Sajt</th><th>Akcije</th></tr></thead>
+                        <thead><tr><th>Naslov</th><th>Lokacija</th><th>Cena</th><th>m²</th><th>Status</th><th>Ugovor</th><th>Sajt</th><th>⭐</th><th>Akcije</th></tr></thead>
                         <tbody>
                           {projUnits.map(p=>(
                             <tr key={p.id}>
@@ -260,10 +327,11 @@ function PropertiesPageInner() {
                               <td><span className={`badge ${p.status==='Aktivna'?'badge-active':p.status==='Prodato'?'badge-sold':'badge-negotiation'}`}>{p.status}</span></td>
                               <td><span style={{fontSize:'0.78rem',fontWeight:600,padding:'3px 8px',borderRadius:6,background:p.contract_signed?'rgba(76,175,80,0.12)':'rgba(255,152,0,0.1)',color:p.contract_signed?'#66bb6a':'#ffb74d'}}>{p.contract_signed?'✓ Da':'✕ Ne'}</span></td>
                               <td><button className={`publish-toggle ${p.published?'published':'unpublished'}`} onClick={()=>togglePublish(p.id)}>{p.published?'✓':'Objavi'}</button></td>
+                              <td><button onClick={()=>toggleFeatured(p.id)} title={p.featured_order ? `Istaknuto #${p.featured_order}` : 'Istakni na sajtu'} style={{background:p.featured_order?'rgba(212,175,55,0.15)':'transparent',border:`1px solid ${p.featured_order?'rgba(212,175,55,0.4)':'rgba(255,255,255,0.1)'}`,borderRadius:6,padding:'4px 8px',cursor:'pointer',fontSize:'0.85rem'}}>{p.featured_order ? '⭐' : '☆'}</button></td>
                               <td><button className="btn-danger btn-sm" onClick={()=>handleDelete(p.id)}>🗑</button></td>
                             </tr>
                           ))}
-                          {projUnits.length===0 && <tr><td colSpan={8} style={{textAlign:'center',padding:20,color:'var(--gray-300)'}}>Nema stanova u projektu</td></tr>}
+                          {projUnits.length===0 && <tr><td colSpan={9} style={{textAlign:'center',padding:20,color:'var(--gray-300)'}}>Nema stanova u projektu</td></tr>}
                         </tbody>
                       </table>
                     </div>
@@ -289,6 +357,7 @@ function PropertiesPageInner() {
                 <th>Ugovor</th>
                 <th>Vlasnik</th>
                 <th>Sajt</th>
+                <th>⭐</th>
                 <th>Akcije</th>
               </tr>
             </thead>
@@ -307,10 +376,11 @@ function PropertiesPageInner() {
                   }}>{p.contract_signed ? '✓ Da' : '✕ Ne'}</span></td>
                   <td style={{fontSize:'0.85rem'}}>{p.owner_first_name} {p.owner_last_name}<br/><span style={{color:'var(--gray-300)',fontSize:'0.75rem'}}>{p.owner_phone}</span></td>
                   <td><button className={`publish-toggle ${p.published?'published':'unpublished'}`} onClick={()=>togglePublish(p.id)}>{p.published?'✓ Objavljeno':'Objavi'}</button></td>
+                  <td><button onClick={()=>toggleFeatured(p.id)} title={p.featured_order ? `Istaknuto #${p.featured_order}` : 'Istakni na sajtu'} style={{background:p.featured_order?'rgba(212,175,55,0.15)':'transparent',border:`1px solid ${p.featured_order?'rgba(212,175,55,0.4)':'rgba(255,255,255,0.1)'}`,borderRadius:6,padding:'4px 8px',cursor:'pointer',fontSize:'0.85rem',transition:'all 0.2s'}}>{p.featured_order ? '⭐' : '☆'}</button></td>
                   <td><button className="btn-danger btn-sm" onClick={()=>handleDelete(p.id)}>🗑</button></td>
                 </tr>
               ))}
-              {standaloneProperties.length===0 && !isNovogradnja && <tr><td colSpan={category ? 9 : 10} style={{textAlign:'center',padding:40,color:'var(--gray-300)'}}>Nema nekretnina u kategoriji {pageTitle}</td></tr>}
+              {standaloneProperties.length===0 && !isNovogradnja && <tr><td colSpan={category ? 10 : 11} style={{textAlign:'center',padding:40,color:'var(--gray-300)'}}>Nema nekretnina u kategoriji {pageTitle}</td></tr>}
               {standaloneProperties.length===0 && isNovogradnja && projects.length===0 && <tr><td colSpan={9} style={{textAlign:'center',padding:40,color:'var(--gray-300)'}}>Nema nekretnina u kategoriji {pageTitle}</td></tr>}
             </tbody>
           </table>

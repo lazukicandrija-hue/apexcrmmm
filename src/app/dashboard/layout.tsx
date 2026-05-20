@@ -35,10 +35,10 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
 
   // Auto-expand ponuda section when on a properties sub-page
   useEffect(() => {
-    if (pathname.includes('properties') && currentCategory) {
+    if (pathname.includes('properties')) {
       setPonudaOpen(true);
     }
-  }, [pathname, currentCategory]);
+  }, [pathname]);
 
   // Close search on click outside
   useEffect(() => {
@@ -74,7 +74,7 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
       if (currentCategory === 'Kuće') return 'Kuće';
       if (currentCategory === 'Lokali') return 'Lokali';
       if (PONUDA_TYPES.some(t => t === currentCategory)) return currentCategory;
-      return 'Ponuda';
+      return 'Sve Nekretnine';
     }
     if (pathname.includes('buyers')) return 'Kupci';
     if (pathname.includes('users')) return 'Korisnici';
@@ -111,6 +111,11 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
           </button>
 
           <div className={`nav-group ${ponudaOpen ? 'open' : ''}`}>
+            <Link href="/dashboard/properties"
+              className={`nav-item nav-sub ${isActive('/dashboard/properties') ? 'active' : ''}`}
+              onClick={() => setSidebarOpen(false)}>
+              <span>📋</span> Sve Nekretnine
+            </Link>
             <Link href="/dashboard/properties?category=Novogradnja"
               className={`nav-item nav-sub ${isActive('/dashboard/properties?category=Novogradnja') ? 'active' : ''}`}
               onClick={() => setSidebarOpen(false)}>

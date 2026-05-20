@@ -8,10 +8,13 @@ export async function GET() {
   const db = getDb();
   const properties = db.prepare(`
     SELECT p.id, p.title, p.description, p.website_description, p.location, p.price, p.type, p.area, p.rooms,
-           p.images, p.created_at, p.floor, p.condition, p.parking, p.terrace, p.heating
+           p.images, p.created_at, p.floor, p.condition, p.parking, p.terrace, p.heating, p.featured_order
     FROM properties p
     WHERE p.published = 1 AND p.status = 'Aktivna'
-    ORDER BY p.created_at DESC
+    ORDER BY 
+      CASE WHEN p.featured_order IS NOT NULL THEN 0 ELSE 1 END ASC,
+      p.featured_order ASC,
+      p.created_at DESC
   `).all();
 
   const formatted = (properties as Record<string, unknown>[]).map(p => ({
