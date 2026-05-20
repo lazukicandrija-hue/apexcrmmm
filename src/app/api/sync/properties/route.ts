@@ -33,6 +33,8 @@ export async function GET() {
     parking: p.parking || null,
     terrace: p.terrace || null,
     heating: p.heating || null,
+    featured_order: p.featured_order || null,
+    featured: p.featured_order !== null,
   }));
 
   return NextResponse.json({
