@@ -29,7 +29,7 @@ export default function BuyersPage() {
   const [showModal, setShowModal] = useState(false);
   const [toast, setToast] = useState<{msg:string;type:string}|null>(null);
   const [form, setForm] = useState({
-    first_name:'',last_name:'',phone:'',email:'',desired_type:'',location:'',
+    full_name:'',phone:'',email:'',desired_type:'',location:'',
     budget:'',notes:'',next_action_date:'',status:'Aktivan',
     financing:'',desired_rooms:'',preferred_locations:[] as string[]
   });
@@ -63,13 +63,17 @@ export default function BuyersPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const nameParts = form.full_name.trim().split(/\s+/);
+    const firstName = nameParts[0] || '';
+    const lastName = nameParts.slice(1).join(' ') || '';
+    if (!firstName) { showToast('Unesite ime kupca','error'); return; }
     const res = await fetch('/api/buyers', {
       method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({...form, budget:Number(form.budget)||null})
+      body: JSON.stringify({...form, first_name: firstName, last_name: lastName, budget:Number(form.budget)||null})
     });
     if (res.ok) {
       showToast('Kupac kreiran!'); setShowModal(false); load();
-      setForm({first_name:'',last_name:'',phone:'',email:'',desired_type:'',location:'',budget:'',notes:'',next_action_date:'',status:'Aktivan',financing:'',desired_rooms:'',preferred_locations:[]});
+      setForm({full_name:'',phone:'',email:'',desired_type:'',location:'',budget:'',notes:'',next_action_date:'',status:'Aktivan',financing:'',desired_rooms:'',preferred_locations:[]});
     } else { const d = await res.json(); showToast(d.error||'Greška','error'); }
   };
 
@@ -135,10 +139,7 @@ export default function BuyersPage() {
             </div>
             <form onSubmit={handleSubmit}>
               <div className="modal-body">
-                <div className="form-row">
-                  <div className="form-group"><label>Ime *</label><input className="form-input" required value={form.first_name} onChange={e=>setForm({...form,first_name:e.target.value})} /></div>
-                  <div className="form-group"><label>Prezime *</label><input className="form-input" required value={form.last_name} onChange={e=>setForm({...form,last_name:e.target.value})} /></div>
-                </div>
+                <div className="form-group"><label>Ime i Prezime *</label><input className="form-input" required value={form.full_name} onChange={e=>setForm({...form,full_name:e.target.value})} placeholder="Npr. Marko Marković" /></div>
                 <div className="form-row">
                   <div className="form-group"><label>Telefon</label><input className="form-input" value={form.phone} onChange={e=>setForm({...form,phone:e.target.value})} /></div>
                   <div className="form-group"><label>Email</label><input className="form-input" type="email" value={form.email} onChange={e=>setForm({...form,email:e.target.value})} /></div>

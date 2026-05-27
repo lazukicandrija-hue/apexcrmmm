@@ -59,16 +59,19 @@ export default function BuyerDetailPage({ params }: { params: Promise<{ id: stri
 
   const enterEdit = () => {
     if (!buyer) return;
-    setEditForm({first_name:buyer.first_name,last_name:buyer.last_name,phone:buyer.phone||'',email:buyer.email||'',desired_type:buyer.desired_type||'',location:buyer.location||'',budget:buyer.budget||0,notes:buyer.notes||'',financing:buyer.financing||'',desired_rooms:buyer.desired_rooms||''});
+    setEditForm({full_name:`${buyer.first_name} ${buyer.last_name}`.trim(),phone:buyer.phone||'',email:buyer.email||'',desired_type:buyer.desired_type||'',location:buyer.location||'',budget:buyer.budget||0,notes:buyer.notes||'',financing:buyer.financing||'',desired_rooms:buyer.desired_rooms||''});
     try { setEditLocations(JSON.parse(buyer.preferred_locations||'[]')); } catch { setEditLocations([]); }
     setEditMode(true);
   };
   const cancelEdit = () => setEditMode(false);
   const saveEdit = async () => {
     setSaving(true);
+    const nameParts = String(editForm.full_name||'').trim().split(/\s+/);
+    const firstName = nameParts[0] || '';
+    const lastName = nameParts.slice(1).join(' ') || '';
     const res = await fetch(`/api/buyers/${id}`, {
       method:'PUT', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({...editForm, budget:Number(editForm.budget)||null, next_action_date:nextActionDate||null, status, preferred_locations:JSON.stringify(editLocations)})
+      body: JSON.stringify({...editForm, first_name: firstName, last_name: lastName, budget:Number(editForm.budget)||null, next_action_date:nextActionDate||null, status, preferred_locations:JSON.stringify(editLocations)})
     });
     if (res.ok) { showToast('Kupac ažuriran ✓'); setEditMode(false); load(); }
     else { const d = await res.json(); showToast(d.error||'Greška','error'); }
@@ -153,10 +156,7 @@ export default function BuyerDetailPage({ params }: { params: Promise<{ id: stri
           <div className="detail-card" style={{marginBottom:20}}>
             <div className="detail-card-title">Informacije o Kupcu</div>
             {editMode ? (<>
-              <div className="form-row">
-                <div className="form-group"><label>Ime</label><input className="form-input" value={editForm.first_name||''} onChange={e=>setEditForm({...editForm,first_name:e.target.value})} /></div>
-                <div className="form-group"><label>Prezime</label><input className="form-input" value={editForm.last_name||''} onChange={e=>setEditForm({...editForm,last_name:e.target.value})} /></div>
-              </div>
+                <div className="form-group"><label>Ime i Prezime</label><input className="form-input" value={editForm.full_name||''} onChange={e=>setEditForm({...editForm,full_name:e.target.value})} placeholder="Npr. Marko Marković" /></div>
               <div className="form-row">
                 <div className="form-group"><label>Telefon</label><input className="form-input" value={editForm.phone||''} onChange={e=>setEditForm({...editForm,phone:e.target.value})} /></div>
                 <div className="form-group"><label>Email</label><input className="form-input" value={editForm.email||''} onChange={e=>setEditForm({...editForm,email:e.target.value})} /></div>
