@@ -24,6 +24,26 @@ const NOVI_SAD_LOKACIJE = [
   'Kovilj','Begeč','Ledinci','Paragovo','Popovica','Bukovac',
 ];
 
+const ROOM_OPTIONS = [
+  { value: 'Garsonjera', label: 'G' },
+  { value: 'Jednosoban', label: '1' },
+  { value: 'Jednoiposoban', label: '1.5' },
+  { value: 'Dvosoban', label: '2' },
+  { value: 'Dvoiposoban', label: '2.5' },
+  { value: 'Trosoban', label: '3' },
+  { value: 'Troiposoban', label: '3.5' },
+  { value: 'Četvorosoban', label: '4' },
+  { value: '4+', label: '4+' },
+];
+
+function parseRooms(val: string): string[] {
+  if (!val) return [];
+  try { const arr = JSON.parse(val); return Array.isArray(arr) ? arr : [val]; } catch { return val ? [val] : []; }
+}
+function roomShort(room: string): string {
+  return ROOM_OPTIONS.find(r => r.value === room)?.label || room;
+}
+
 export default function BuyerDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
@@ -37,6 +57,7 @@ export default function BuyerDetailPage({ params }: { params: Promise<{ id: stri
   // Edit mode
   const [editMode, setEditMode] = useState(false);
   const [editForm, setEditForm] = useState<Record<string,string|number>>({});
+  const [editRooms, setEditRooms] = useState<string[]>([]);
   const [editLocations, setEditLocations] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
 
@@ -59,7 +80,15 @@ export default function BuyerDetailPage({ params }: { params: Promise<{ id: stri
 
   const enterEdit = () => {
     if (!buyer) return;
-    setEditForm({full_name:`${buyer.first_name} ${buyer.last_name}`.trim(),phone:buyer.phone||'',email:buyer.email||'',desired_type:buyer.desired_type||'',location:buyer.location||'',budget:buyer.budget||0,notes:buyer.notes||'',financing:buyer.financing||'',desired_rooms:buyer.desired_rooms||''});
+    setEditForm({
+      full_name: `${buyer.first_name} ${buyer.last_name}`.trim(),
+      phone: buyer.phone||'', email: buyer.email||'',
+      desired_type: buyer.desired_type||'',
+      location: buyer.location||'',
+      budget: buyer.budget||0, notes: buyer.notes||'',
+      financing: buyer.financing||'',
+    });
+    setEditRooms(parseRooms(buyer.desired_rooms));
     try { setEditLocations(JSON.parse(buyer.preferred_locations||'[]')); } catch { setEditLocations([]); }
     setEditMode(true);
   };
@@ -71,7 +100,19 @@ export default function BuyerDetailPage({ params }: { params: Promise<{ id: stri
     const lastName = nameParts.slice(1).join(' ') || '';
     const res = await fetch(`/api/buyers/${id}`, {
       method:'PUT', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({...editForm, first_name: firstName, last_name: lastName, budget:Number(editForm.budget)||null, next_action_date:nextActionDate||null, status, preferred_locations:JSON.stringify(editLocations)})
+      body: JSON.stringify({
+        first_name: firstName, last_name: lastName,
+        phone: editForm.phone, email: editForm.email,
+        desired_type: editForm.desired_type,
+        desired_rooms: JSON.stringify(editRooms),
+        financing: editForm.financing,
+        budget: Number(editForm.budget)||null,
+        location: editForm.location,
+        notes: editForm.notes,
+        next_action_date: nextActionDate||null,
+        status,
+        preferred_locations: JSON.stringify(editLocations),
+      })
     });
     if (res.ok) { showToast('Kupac ažuriran ✓'); setEditMode(false); load(); }
     else { const d = await res.json(); showToast(d.error||'Greška','error'); }
@@ -129,6 +170,10 @@ export default function BuyerDetailPage({ params }: { params: Promise<{ id: stri
     return 'badge-new';
   };
 
+  const buyerRooms = parseRooms(buyer.desired_rooms);
+  let buyerLocs: string[] = [];
+  try { buyerLocs = JSON.parse(buyer.preferred_locations||'[]'); } catch { /* ignore */ }
+
   return (
     <>
       {toast && <div className={`toast toast-${toast.type}`}>{toast.msg}</div>}
@@ -162,47 +207,68 @@ export default function BuyerDetailPage({ params }: { params: Promise<{ id: stri
                 <div className="form-group"><label>Email</label><input className="form-input" value={editForm.email||''} onChange={e=>setEditForm({...editForm,email:e.target.value})} /></div>
               </div>
               <div className="form-row">
-                <div className="form-group"><label>Traži tip</label><select className="form-select" value={editForm.desired_type||''} onChange={e=>setEditForm({...editForm,desired_type:e.target.value})}><option value="">-</option><option>Novogradnja</option><option>Starogradnja</option><option>Lokali</option><option>Rente</option></select></div>
-                <div className="form-group"><label>Željena Sobnost</label><select className="form-select" value={editForm.desired_rooms||''} onChange={e=>setEditForm({...editForm,desired_rooms:e.target.value})}><option value="">-</option><option>Garsonjera</option><option>Jednosoban</option><option>Jednoiposoban</option><option>Dvosoban</option><option>Dvoiposoban</option><option>Trosoban</option><option>Troiposoban</option><option>Četvorosoban</option><option>4+</option></select></div>
+                <div className="form-group"><label>Tip Nekretnine</label><select className="form-select" value={editForm.desired_type||''} onChange={e=>setEditForm({...editForm,desired_type:e.target.value})}><option value="">-</option><option>Stan</option><option>Kuća</option><option>Plac</option><option>Lokal</option></select></div>
+                <div className="form-group"><label>Način Finansiranja</label><select className="form-select" value={editForm.financing||''} onChange={e=>setEditForm({...editForm,financing:e.target.value})}><option value="">-</option><option>Keš</option><option>Kredit</option><option>Kombinovano</option></select></div>
               </div>
               <div className="form-row">
-                <div className="form-group"><label>Način Finansiranja</label><select className="form-select" value={editForm.financing||''} onChange={e=>setEditForm({...editForm,financing:e.target.value})}><option value="">-</option><option>Keš</option><option>Kredit</option><option>Kombinovano</option></select></div>
                 <div className="form-group"><label>Budžet (€)</label><input className="form-input" type="number" value={editForm.budget||''} onChange={e=>setEditForm({...editForm,budget:e.target.value})} /></div>
               </div>
-              <div className="form-group"><label>Lokacija (tekst)</label><input className="form-input" value={editForm.location||''} onChange={e=>setEditForm({...editForm,location:e.target.value})} placeholder="Npr. Novi Sad" /></div>
+              {/* Multi-select sobe */}
               <div className="form-group">
-                <label>Željene Lokacije (delovi grada)</label>
-                <div style={{display:'flex',flexWrap:'wrap',gap:6,marginTop:6,maxHeight:140,overflowY:'auto',padding:8,background:'rgba(255,255,255,0.03)',borderRadius:8,border:'1px solid rgba(212,175,55,0.1)'}}>
-                  {NOVI_SAD_LOKACIJE.map(loc=>(
-                    <label key={loc} style={{display:'flex',alignItems:'center',gap:4,fontSize:'0.78rem',padding:'4px 10px',borderRadius:16,cursor:'pointer',userSelect:'none',
-                      background:editLocations.includes(loc)?'rgba(212,175,55,0.2)':'rgba(255,255,255,0.04)',
-                      border:`1px solid ${editLocations.includes(loc)?'rgba(212,175,55,0.4)':'rgba(255,255,255,0.08)'}`,
-                      color:editLocations.includes(loc)?'var(--gold)':'var(--gray-300)',transition:'all 0.15s'}}>
-                      <input type="checkbox" checked={editLocations.includes(loc)} onChange={e=>{
-                        setEditLocations(e.target.checked ? [...editLocations, loc] : editLocations.filter(l=>l!==loc));
-                      }} style={{display:'none'}} />
-                      {editLocations.includes(loc)?'✓ ':''}{loc}
-                    </label>
-                  ))}
+                <label>Željene Sobe</label>
+                <div style={{display:'flex',flexWrap:'wrap',gap:6,marginTop:6}}>
+                  {ROOM_OPTIONS.map(r => {
+                    const sel = editRooms.includes(r.value);
+                    return (
+                      <label key={r.value} style={{display:'flex',alignItems:'center',gap:4,fontSize:'0.82rem',padding:'5px 14px',borderRadius:20,cursor:'pointer',userSelect:'none',
+                        background:sel?'rgba(212,175,55,0.2)':'rgba(255,255,255,0.04)',
+                        border:`1px solid ${sel?'rgba(212,175,55,0.4)':'rgba(255,255,255,0.08)'}`,
+                        color:sel?'var(--gold)':'var(--gray-300)',transition:'all 0.15s',fontWeight:sel?600:400}}>
+                        <input type="checkbox" checked={sel} onChange={e=>{
+                          setEditRooms(e.target.checked ? [...editRooms, r.value] : editRooms.filter(x=>x!==r.value));
+                        }} style={{display:'none'}} />
+                        {sel?'✓ ':''}{r.label}
+                      </label>
+                    );
+                  })}
                 </div>
               </div>
-              <div className="form-group"><label>Napomene</label><textarea className="form-textarea" value={editForm.notes as string||''} onChange={e=>setEditForm({...editForm,notes:e.target.value})} style={{minHeight:80}} /></div>
+              <div className="form-group">
+                <label>Željene Lokacije</label>
+                <div style={{display:'flex',flexWrap:'wrap',gap:6,marginTop:6,maxHeight:140,overflowY:'auto',padding:8,background:'rgba(255,255,255,0.03)',borderRadius:8,border:'1px solid rgba(212,175,55,0.1)'}}>
+                  {NOVI_SAD_LOKACIJE.map(loc=>{
+                    const sel = editLocations.includes(loc);
+                    return (
+                      <label key={loc} style={{display:'flex',alignItems:'center',gap:4,fontSize:'0.78rem',padding:'4px 10px',borderRadius:16,cursor:'pointer',userSelect:'none',
+                        background:sel?'rgba(212,175,55,0.2)':'rgba(255,255,255,0.04)',
+                        border:`1px solid ${sel?'rgba(212,175,55,0.4)':'rgba(255,255,255,0.08)'}`,
+                        color:sel?'var(--gold)':'var(--gray-300)',transition:'all 0.15s'}}>
+                        <input type="checkbox" checked={sel} onChange={e=>{
+                          setEditLocations(e.target.checked ? [...editLocations, loc] : editLocations.filter(l=>l!==loc));
+                        }} style={{display:'none'}} />
+                        {sel?'✓ ':''}{loc}
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+              <div className="form-group"><label>Napomena</label><input className="form-input" value={editForm.location||''} onChange={e=>setEditForm({...editForm,location:e.target.value})} placeholder="Nešto specifično..." /></div>
+              <div className="form-group"><label>Detaljne Napomene</label><textarea className="form-textarea" value={editForm.notes as string||''} onChange={e=>setEditForm({...editForm,notes:e.target.value})} style={{minHeight:80}} /></div>
             </>) : (<>
               <div className="detail-row"><span className="detail-label">Telefon</span><span className="detail-value"><a href={`tel:${buyer.phone}`} style={{color:'var(--gold)'}}>{buyer.phone}</a></span></div>
               <div className="detail-row"><span className="detail-label">Email</span><span className="detail-value"><a href={`mailto:${buyer.email}`} style={{color:'var(--gold)'}}>{buyer.email}</a></span></div>
-              <div className="detail-row"><span className="detail-label">Traži</span><span className="detail-value">{buyer.desired_type||'-'}</span></div>
-              <div className="detail-row"><span className="detail-label">Željena Sobnost</span><span className="detail-value">{buyer.desired_rooms||'-'}</span></div>
+              <div className="detail-row"><span className="detail-label">Tip</span><span className="detail-value">{buyer.desired_type||'-'}</span></div>
+              <div className="detail-row"><span className="detail-label">Željene Sobe</span><span className="detail-value" style={{color:'var(--gold)',fontWeight:500}}>{buyerRooms.length > 0 ? buyerRooms.map(r => roomShort(r)).join(', ') : '-'}</span></div>
               <div className="detail-row"><span className="detail-label">Finansiranje</span><span className="detail-value"><span style={{padding:'3px 10px',borderRadius:6,fontSize:'0.82rem',background:buyer.financing==='Keš'?'rgba(76,175,80,0.12)':buyer.financing==='Kredit'?'rgba(33,150,243,0.12)':buyer.financing==='Kombinovano'?'rgba(255,152,0,0.12)':'transparent',color:buyer.financing==='Keš'?'#66bb6a':buyer.financing==='Kredit'?'#64b5f6':buyer.financing==='Kombinovano'?'#ffb74d':'var(--gray-300)'}}>{buyer.financing||'-'}</span></span></div>
-              <div className="detail-row"><span className="detail-label">Lokacija</span><span className="detail-value">{buyer.location||'-'}</span></div>
               <div className="detail-row"><span className="detail-label">Budžet</span><span className="detail-value" style={{color:'var(--gold)'}}>€{buyer.budget?.toLocaleString('sr-RS')||'-'}</span></div>
-              {buyer.preferred_locations && (() => { try { const locs = JSON.parse(buyer.preferred_locations); return locs.length > 0 ? (
+              {buyerLocs.length > 0 && (
                 <div style={{marginTop:10}}>
                   <div className="detail-label" style={{marginBottom:6}}>Željene Lokacije</div>
                   <div style={{display:'flex',flexWrap:'wrap',gap:4}}>
-                    {locs.map((l:string)=>(<span key={l} style={{fontSize:'0.75rem',padding:'3px 10px',borderRadius:16,background:'rgba(212,175,55,0.1)',border:'1px solid rgba(212,175,55,0.2)',color:'var(--gold)'}}>{l}</span>))}
+                    {buyerLocs.map((l:string)=>(<span key={l} style={{fontSize:'0.75rem',padding:'3px 10px',borderRadius:16,background:'rgba(212,175,55,0.1)',border:'1px solid rgba(212,175,55,0.2)',color:'var(--gold)'}}>{l}</span>))}
                   </div>
                 </div>
-              ) : null; } catch { return null; } })()}
+              )}
             </>)}
             <div className="detail-row">
               <span className="detail-label">Status</span>
@@ -222,7 +288,8 @@ export default function BuyerDetailPage({ params }: { params: Promise<{ id: stri
               </div>
             </div>
             <div className="detail-row"><span className="detail-label">Dodat</span><span className="detail-value">{new Date(buyer.created_at).toLocaleDateString('sr-RS')}</span></div>
-            {!editMode && buyer.notes && <div style={{marginTop:12}}><div className="detail-label" style={{marginBottom:6}}>Inicijalne napomene</div><p style={{fontSize:'0.82rem',color:'var(--gray-200)',background:'rgba(212,175,55,0.05)',padding:10,borderRadius:8,lineHeight:1.5}}>{buyer.notes}</p></div>}
+            {!editMode && buyer.location && <div style={{marginTop:12}}><div className="detail-label" style={{marginBottom:6}}>Napomena</div><p style={{fontSize:'0.82rem',color:'var(--gray-200)',background:'rgba(212,175,55,0.05)',padding:10,borderRadius:8,lineHeight:1.5}}>{buyer.location}</p></div>}
+            {!editMode && buyer.notes && <div style={{marginTop:12}}><div className="detail-label" style={{marginBottom:6}}>Detaljne Napomene</div><p style={{fontSize:'0.82rem',color:'var(--gray-200)',background:'rgba(212,175,55,0.05)',padding:10,borderRadius:8,lineHeight:1.5}}>{buyer.notes}</p></div>}
           </div>
         </div>
 

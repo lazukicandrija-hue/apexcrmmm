@@ -21,17 +21,44 @@ const NOVI_SAD_LOKACIJE = [
   'Kovilj','Begeč','Ledinci','Paragovo','Popovica','Bukovac',
 ];
 
+const ROOM_OPTIONS = [
+  { value: 'Garsonjera', label: 'G' },
+  { value: 'Jednosoban', label: '1' },
+  { value: 'Jednoiposoban', label: '1.5' },
+  { value: 'Dvosoban', label: '2' },
+  { value: 'Dvoiposoban', label: '2.5' },
+  { value: 'Trosoban', label: '3' },
+  { value: 'Troiposoban', label: '3.5' },
+  { value: 'Četvorosoban', label: '4' },
+  { value: '4+', label: '4+' },
+];
+
+function parseRooms(val: string): string[] {
+  if (!val) return [];
+  try { const arr = JSON.parse(val); return Array.isArray(arr) ? arr : [val]; } catch { return val ? [val] : []; }
+}
+function parseLocs(val: string): string[] {
+  if (!val) return [];
+  try { const arr = JSON.parse(val); return Array.isArray(arr) ? arr : []; } catch { return []; }
+}
+function roomShort(room: string): string {
+  return ROOM_OPTIONS.find(r => r.value === room)?.label || room;
+}
+
 export default function BuyersPage() {
   const [buyers, setBuyers] = useState<Buyer[]>([]);
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
+  const [filterRooms, setFilterRooms] = useState('');
+  const [filterBudget, setFilterBudget] = useState('');
+  const [filterLocation, setFilterLocation] = useState('');
   const [filterType, setFilterType] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [toast, setToast] = useState<{msg:string;type:string}|null>(null);
   const [form, setForm] = useState({
     full_name:'',phone:'',email:'',desired_type:'',location:'',
     budget:'',notes:'',next_action_date:'',status:'Aktivan',
-    financing:'',desired_rooms:'',preferred_locations:[] as string[]
+    financing:'',desired_rooms:[] as string[],preferred_locations:[] as string[]
   });
 
   const today = new Date().toISOString().split('T')[0];
@@ -40,25 +67,41 @@ export default function BuyersPage() {
     const p = new URLSearchParams();
     if (search) p.set('search', search);
     if (filterStatus) p.set('status', filterStatus);
-    if (filterType) p.set('type', filterType);
     fetch(`/api/buyers?${p}`).then(r=>r.json()).then(d=>setBuyers(d.buyers||[]));
-  }, [search, filterStatus, filterType]);
+  }, [search, filterStatus]);
 
   useEffect(() => { load(); }, [load]);
 
   const showToast = (msg:string, type='success') => { setToast({msg,type}); setTimeout(()=>setToast(null), 3000); };
 
-  const getDateBadge = (date:string) => {
-    if (!date) return '';
-    if (date < today) return 'badge-overdue';
-    const diff = (new Date(date).getTime() - new Date(today).getTime()) / 86400000;
-    return diff <= 2 ? 'badge-soon' : 'badge-future';
-  };
+  // Client-side filtering for type, rooms, budget, location
+  const filteredBuyers = buyers.filter(b => {
+    if (filterType && b.desired_type !== filterType) return false;
+    if (filterRooms) {
+      const rooms = parseRooms(b.desired_rooms);
+      if (!rooms.includes(filterRooms)) return false;
+    }
+    if (filterBudget) {
+      const budget = b.budget || 0;
+      if (filterBudget === '0-100' && budget > 100000) return false;
+      if (filterBudget === '100-150' && (budget < 100000 || budget > 150000)) return false;
+      if (filterBudget === '150-200' && (budget < 150000 || budget > 200000)) return false;
+      if (filterBudget === '200+' && budget < 200000) return false;
+    }
+    if (filterLocation) {
+      const locs = parseLocs(b.preferred_locations);
+      if (!locs.includes(filterLocation)) return false;
+    }
+    return true;
+  });
 
-  const getDateLabel = (date:string) => {
-    if (!date) return '-';
-    if (date < today) return `⚠️ ${new Date(date).toLocaleDateString('sr-RS')}`;
-    return new Date(date).toLocaleDateString('sr-RS');
+  const getFollowUp = (date: string) => {
+    if (!date) return { icon: '⚪', cls: '', label: '-' };
+    const d = new Date(date).toLocaleDateString('sr-RS');
+    if (date < today) return { icon: '🔴', cls: 'badge-overdue', label: d };
+    const diff = (new Date(date).getTime() - new Date(today).getTime()) / 86400000;
+    if (diff <= 1) return { icon: '🟡', cls: 'badge-soon', label: d };
+    return { icon: '🟢', cls: 'badge-future', label: d };
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -69,11 +112,23 @@ export default function BuyersPage() {
     if (!firstName) { showToast('Unesite ime kupca','error'); return; }
     const res = await fetch('/api/buyers', {
       method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({...form, first_name: firstName, last_name: lastName, budget:Number(form.budget)||null})
+      body: JSON.stringify({
+        first_name: firstName, last_name: lastName,
+        phone: form.phone, email: form.email,
+        desired_type: form.desired_type,
+        desired_rooms: JSON.stringify(form.desired_rooms),
+        financing: form.financing,
+        budget: Number(form.budget)||null,
+        location: form.location,
+        preferred_locations: form.preferred_locations,
+        notes: form.notes,
+        next_action_date: form.next_action_date,
+        status: form.status,
+      })
     });
     if (res.ok) {
       showToast('Kupac kreiran!'); setShowModal(false); load();
-      setForm({full_name:'',phone:'',email:'',desired_type:'',location:'',budget:'',notes:'',next_action_date:'',status:'Aktivan',financing:'',desired_rooms:'',preferred_locations:[]});
+      setForm({full_name:'',phone:'',email:'',desired_type:'',location:'',budget:'',notes:'',next_action_date:'',status:'Aktivan',financing:'',desired_rooms:[],preferred_locations:[]});
     } else { const d = await res.json(); showToast(d.error||'Greška','error'); }
   };
 
@@ -83,13 +138,21 @@ export default function BuyersPage() {
     showToast('Kupac obrisan'); load();
   };
 
+  // Collect unique locations from all buyers for filter
+  const allLocations = Array.from(new Set(buyers.flatMap(b => parseLocs(b.preferred_locations)))).sort();
+  // Collect unique types
+  const allTypes = Array.from(new Set(buyers.map(b => b.desired_type).filter(Boolean)));
+  const typeOptions = Array.from(new Set([...allTypes, 'Stan', 'Kuća', 'Plac', 'Lokal']));
+
+  const hasFilters = filterType || filterRooms || filterBudget || filterLocation;
+
   return (
     <>
       {toast && <div className={`toast toast-${toast.type}`}>{toast.msg}</div>}
 
       <div className="table-card">
         <div className="table-header">
-          <div className="table-title">Kupci ({buyers.length})</div>
+          <div className="table-title">Kupci ({filteredBuyers.length}{hasFilters ? ` / ${buyers.length}` : ''})</div>
           <div className="table-actions">
             <div className="search-wrap">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
@@ -101,30 +164,69 @@ export default function BuyersPage() {
             </select>
             <select className="filter-select" value={filterType} onChange={e=>setFilterType(e.target.value)}>
               <option value="">Svi tipovi</option>
-              <option>Novogradnja</option><option>Starogradnja</option><option>Rente</option><option>Lokali</option>
+              {typeOptions.map(t => <option key={t}>{t}</option>)}
             </select>
             <a href="/api/export/buyers" className="btn-outline btn-sm">📥 CSV</a>
             <button className="btn-gold btn-sm" onClick={()=>setShowModal(true)}>+ Dodaj</button>
           </div>
         </div>
+        {/* Filter row 2 - rooms, budget, location */}
+        <div style={{display:'flex',flexWrap:'wrap',gap:8,padding:'0 20px 14px',borderBottom:'1px solid rgba(212,175,55,0.08)'}}>
+          <select className="filter-select" value={filterRooms} onChange={e=>setFilterRooms(e.target.value)} style={{fontSize:'0.78rem',padding:'5px 24px 5px 8px'}}>
+            <option value="">Sve sobe</option>
+            {ROOM_OPTIONS.map(r => <option key={r.value} value={r.value}>{r.label} ({r.value})</option>)}
+          </select>
+          <select className="filter-select" value={filterBudget} onChange={e=>setFilterBudget(e.target.value)} style={{fontSize:'0.78rem',padding:'5px 24px 5px 8px'}}>
+            <option value="">Svi budžeti</option>
+            <option value="0-100">Do €100k</option>
+            <option value="100-150">€100k - €150k</option>
+            <option value="150-200">€150k - €200k</option>
+            <option value="200+">Preko €200k</option>
+          </select>
+          <select className="filter-select" value={filterLocation} onChange={e=>setFilterLocation(e.target.value)} style={{fontSize:'0.78rem',padding:'5px 24px 5px 8px'}}>
+            <option value="">Sve lokacije</option>
+            {allLocations.map(l => <option key={l}>{l}</option>)}
+          </select>
+          {hasFilters && (
+            <button onClick={()=>{setFilterType('');setFilterRooms('');setFilterBudget('');setFilterLocation('');}} style={{fontSize:'0.75rem',padding:'4px 10px',borderRadius:6,background:'rgba(255,77,77,0.1)',border:'1px solid rgba(255,77,77,0.2)',color:'#ff6b6b',cursor:'pointer'}}>✕ Resetuj filtere</button>
+          )}
+        </div>
         <div className="table-overflow">
           <table className="data-table">
-            <thead><tr><th>Ime</th><th>Telefon</th><th>Traži</th><th>Sobe</th><th>Finansiranje</th><th>Budžet</th><th>Sledeća Akcija</th><th>Status</th><th>Akcije</th></tr></thead>
+            <thead><tr>
+              <th>Ime</th><th>Telefon</th><th>Tip</th><th>Sobe</th><th>Lokacije</th><th>Budžet</th><th>Sledeća Akcija</th><th>Status</th><th>Akcije</th>
+            </tr></thead>
             <tbody>
-              {buyers.map(b=>(
-                <tr key={b.id}>
-                  <td><Link href={`/dashboard/buyers/${b.id}`} style={{color:'#fff',fontWeight:500}}>{b.first_name} {b.last_name}</Link></td>
-                  <td style={{fontSize:'0.85rem'}}>{b.phone}</td>
-                  <td><span className="badge badge-new">{b.desired_type||'-'}</span></td>
-                  <td style={{fontSize:'0.85rem'}}>{b.desired_rooms||'-'}</td>
-                  <td><span style={{fontSize:'0.78rem',padding:'3px 8px',borderRadius:6,background:b.financing==='Keš'?'rgba(76,175,80,0.12)':b.financing==='Kredit'?'rgba(33,150,243,0.12)':b.financing==='Kombinovano'?'rgba(255,152,0,0.12)':'transparent',color:b.financing==='Keš'?'#66bb6a':b.financing==='Kredit'?'#64b5f6':b.financing==='Kombinovano'?'#ffb74d':'var(--gray-300)'}}>{b.financing||'-'}</span></td>
-                  <td style={{color:'var(--gold)'}}>€{b.budget?.toLocaleString('sr-RS')||'-'}</td>
-                  <td><span className={`badge ${getDateBadge(b.next_action_date)}`}>{getDateLabel(b.next_action_date)}</span></td>
-                  <td><span className={`badge ${b.status==='Aktivan'?'badge-active':b.status==='Pauzirana Potraga'?'badge-negotiation':'badge-sold'}`}>{b.status}</span></td>
-                  <td><button className="btn-danger btn-sm" onClick={()=>handleDelete(b.id)}>🗑</button></td>
-                </tr>
-              ))}
-              {buyers.length===0 && <tr><td colSpan={9} style={{textAlign:'center',padding:40,color:'var(--gray-300)'}}>Nema kupaca</td></tr>}
+              {filteredBuyers.map(b => {
+                const rooms = parseRooms(b.desired_rooms);
+                const locs = parseLocs(b.preferred_locations);
+                const fu = getFollowUp(b.next_action_date);
+                return (
+                  <tr key={b.id}>
+                    <td><Link href={`/dashboard/buyers/${b.id}`} style={{color:'#fff',fontWeight:500}}>{b.first_name} {b.last_name}</Link></td>
+                    <td style={{fontSize:'0.85rem'}}>{b.phone}</td>
+                    <td><span className="badge badge-new" style={{fontSize:'0.72rem'}}>{b.desired_type||'-'}</span></td>
+                    <td style={{fontSize:'0.85rem',color:'var(--gold)',fontWeight:500}}>{rooms.length > 0 ? rooms.map(r => roomShort(r)).join(', ') : '-'}</td>
+                    <td>
+                      <div style={{display:'flex',flexWrap:'wrap',gap:3,maxWidth:220}}>
+                        {locs.length > 0 ? locs.slice(0,4).map(l => (
+                          <span key={l} style={{fontSize:'0.65rem',padding:'1px 6px',borderRadius:10,background:'rgba(212,175,55,0.1)',border:'1px solid rgba(212,175,55,0.15)',color:'var(--gold)',whiteSpace:'nowrap'}}>{l}</span>
+                        )) : <span style={{color:'var(--gray-400)',fontSize:'0.8rem'}}>-</span>}
+                        {locs.length > 4 && <span style={{fontSize:'0.65rem',color:'var(--gray-300)'}}>+{locs.length-4}</span>}
+                      </div>
+                    </td>
+                    <td style={{color:'var(--gold)'}}>€{b.budget?.toLocaleString('sr-RS')||'-'}</td>
+                    <td>
+                      <span className={`badge ${fu.cls}`} style={{fontSize:'0.75rem'}}>
+                        {fu.icon} {fu.label}
+                      </span>
+                    </td>
+                    <td><span className={`badge ${b.status==='Aktivan'?'badge-active':b.status==='Pauzirana Potraga'?'badge-negotiation':'badge-sold'}`}>{b.status}</span></td>
+                    <td><button className="btn-danger btn-sm" onClick={()=>handleDelete(b.id)}>🗑</button></td>
+                  </tr>
+                );
+              })}
+              {filteredBuyers.length===0 && <tr><td colSpan={9} style={{textAlign:'center',padding:40,color:'var(--gray-300)'}}>{buyers.length > 0 ? 'Nema kupaca sa ovim filterima' : 'Nema kupaca'}</td></tr>}
             </tbody>
           </table>
         </div>
@@ -146,45 +248,60 @@ export default function BuyersPage() {
                 </div>
                 <div className="form-row">
                   <div className="form-group">
-                    <label>Traženi Tip</label>
+                    <label>Tip Nekretnine</label>
                     <select className="form-select" value={form.desired_type} onChange={e=>setForm({...form,desired_type:e.target.value})}>
-                      <option value="">-</option><option>Novogradnja</option><option>Starogradnja</option><option>Rente</option><option>Lokali</option>
+                      <option value="">-</option><option>Stan</option><option>Kuća</option><option>Plac</option><option>Lokal</option>
                     </select>
                   </div>
-                  <div className="form-group">
-                    <label>Željena Sobnost</label>
-                    <select className="form-select" value={form.desired_rooms} onChange={e=>setForm({...form,desired_rooms:e.target.value})}>
-                      <option value="">-</option><option>Garsonjera</option><option>Jednosoban</option><option>Jednoiposoban</option><option>Dvosoban</option><option>Dvoiposoban</option><option>Trosoban</option><option>Troiposoban</option><option>Četvorosoban</option><option>4+</option>
-                    </select>
-                  </div>
-                </div>
-                <div className="form-row">
                   <div className="form-group">
                     <label>Način Finansiranja</label>
                     <select className="form-select" value={form.financing} onChange={e=>setForm({...form,financing:e.target.value})}>
                       <option value="">-</option><option>Keš</option><option>Kredit</option><option>Kombinovano</option>
                     </select>
                   </div>
-                  <div className="form-group"><label>Budžet (€)</label><input className="form-input" type="number" value={form.budget} onChange={e=>setForm({...form,budget:e.target.value})} /></div>
                 </div>
                 <div className="form-row">
-                  <div className="form-group"><label>Lokacija (tekst)</label><input className="form-input" value={form.location} onChange={e=>setForm({...form,location:e.target.value})} placeholder="Centar, Novi Sad" /></div>
+                  <div className="form-group"><label>Budžet (€)</label><input className="form-input" type="number" value={form.budget} onChange={e=>setForm({...form,budget:e.target.value})} /></div>
                   <div className="form-group"><label>Sledeća Akcija</label><input className="form-input" type="date" value={form.next_action_date} onChange={e=>setForm({...form,next_action_date:e.target.value})} /></div>
                 </div>
+                {/* Multi-select sobe */}
                 <div className="form-group">
-                  <label>Željene Lokacije (delovi grada)</label>
+                  <label>Željene Sobe</label>
+                  <div style={{display:'flex',flexWrap:'wrap',gap:6,marginTop:6}}>
+                    {ROOM_OPTIONS.map(r => {
+                      const sel = form.desired_rooms.includes(r.value);
+                      return (
+                        <label key={r.value} style={{display:'flex',alignItems:'center',gap:4,fontSize:'0.82rem',padding:'5px 14px',borderRadius:20,cursor:'pointer',userSelect:'none',
+                          background:sel?'rgba(212,175,55,0.2)':'rgba(255,255,255,0.04)',
+                          border:`1px solid ${sel?'rgba(212,175,55,0.4)':'rgba(255,255,255,0.08)'}`,
+                          color:sel?'var(--gold)':'var(--gray-300)',transition:'all 0.15s',fontWeight:sel?600:400}}>
+                          <input type="checkbox" checked={sel} onChange={e=>{
+                            setForm({...form, desired_rooms: e.target.checked ? [...form.desired_rooms, r.value] : form.desired_rooms.filter(x=>x!==r.value)});
+                          }} style={{display:'none'}} />
+                          {sel?'✓ ':''}{r.label}
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+                {/* Multi-select lokacije */}
+                <div className="form-group">
+                  <label>Željene Lokacije</label>
                   <div style={{display:'flex',flexWrap:'wrap',gap:6,marginTop:6,maxHeight:140,overflowY:'auto',padding:8,background:'rgba(255,255,255,0.03)',borderRadius:8,border:'1px solid rgba(212,175,55,0.1)'}}>
-                    {NOVI_SAD_LOKACIJE.map(loc=>(
-                      <label key={loc} style={{display:'flex',alignItems:'center',gap:4,fontSize:'0.78rem',padding:'4px 10px',borderRadius:16,cursor:'pointer',userSelect:'none',
-                        background:form.preferred_locations.includes(loc)?'rgba(212,175,55,0.2)':'rgba(255,255,255,0.04)',
-                        border:`1px solid ${form.preferred_locations.includes(loc)?'rgba(212,175,55,0.4)':'rgba(255,255,255,0.08)'}`,
-                        color:form.preferred_locations.includes(loc)?'var(--gold)':'var(--gray-300)',transition:'all 0.15s'}}>
-                        <input type="checkbox" checked={form.preferred_locations.includes(loc)} onChange={e=>{
-                          setForm({...form, preferred_locations: e.target.checked ? [...form.preferred_locations, loc] : form.preferred_locations.filter(l=>l!==loc)});
-                        }} style={{display:'none'}} />
-                        {form.preferred_locations.includes(loc)?'✓ ':''}{loc}
-                      </label>
-                    ))}
+                    {NOVI_SAD_LOKACIJE.map(loc=>{
+                      const sel = form.preferred_locations.includes(loc);
+                      return (
+                        <label key={loc} style={{display:'flex',alignItems:'center',gap:4,fontSize:'0.78rem',padding:'4px 10px',borderRadius:16,cursor:'pointer',userSelect:'none',
+                          background:sel?'rgba(212,175,55,0.2)':'rgba(255,255,255,0.04)',
+                          border:`1px solid ${sel?'rgba(212,175,55,0.4)':'rgba(255,255,255,0.08)'}`,
+                          color:sel?'var(--gold)':'var(--gray-300)',transition:'all 0.15s'}}>
+                          <input type="checkbox" checked={sel} onChange={e=>{
+                            setForm({...form, preferred_locations: e.target.checked ? [...form.preferred_locations, loc] : form.preferred_locations.filter(l=>l!==loc)});
+                          }} style={{display:'none'}} />
+                          {sel?'✓ ':''}{loc}
+                        </label>
+                      );
+                    })}
                   </div>
                 </div>
                 <div className="form-group">
@@ -193,7 +310,8 @@ export default function BuyersPage() {
                     <option>Aktivan</option><option>Pauzirana Potraga</option><option>Kupio Stan</option>
                   </select>
                 </div>
-                <div className="form-group"><label>Napomene</label><textarea className="form-textarea" value={form.notes} onChange={e=>setForm({...form,notes:e.target.value})} placeholder="Šta traži, posebni zahtevi..." /></div>
+                <div className="form-group"><label>Napomena</label><textarea className="form-textarea" value={form.location} onChange={e=>setForm({...form,location:e.target.value})} placeholder="Nešto specifično što je kupac rekao..." /></div>
+                <div className="form-group"><label>Detaljne Napomene</label><textarea className="form-textarea" value={form.notes} onChange={e=>setForm({...form,notes:e.target.value})} placeholder="Šta traži, posebni zahtevi..." /></div>
               </div>
               <div className="modal-footer">
                 <button type="button" className="btn-outline" onClick={()=>setShowModal(false)}>Otkaži</button>
