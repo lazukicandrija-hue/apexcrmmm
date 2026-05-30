@@ -36,13 +36,15 @@ const ROOM_OPTIONS = [
   { value: '4+', label: '4+' },
 ];
 
-function parseRooms(val: string): string[] {
+function parseArr(val: string): string[] {
   if (!val) return [];
   try { const arr = JSON.parse(val); return Array.isArray(arr) ? arr : [val]; } catch { return val ? [val] : []; }
 }
 function roomShort(room: string): string {
   return ROOM_OPTIONS.find(r => r.value === room)?.label || room;
 }
+
+const TYPE_OPTIONS = ['Stan', 'Kuća', 'Plac', 'Lokal'];
 
 export default function BuyerDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -57,6 +59,7 @@ export default function BuyerDetailPage({ params }: { params: Promise<{ id: stri
   // Edit mode
   const [editMode, setEditMode] = useState(false);
   const [editForm, setEditForm] = useState<Record<string,string|number>>({});
+  const [editTypes, setEditTypes] = useState<string[]>([]);
   const [editRooms, setEditRooms] = useState<string[]>([]);
   const [editLocations, setEditLocations] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
@@ -83,12 +86,12 @@ export default function BuyerDetailPage({ params }: { params: Promise<{ id: stri
     setEditForm({
       full_name: `${buyer.first_name} ${buyer.last_name}`.trim(),
       phone: buyer.phone||'', email: buyer.email||'',
-      desired_type: buyer.desired_type||'',
       location: buyer.location||'',
       budget: buyer.budget||0, notes: buyer.notes||'',
       financing: buyer.financing||'',
     });
-    setEditRooms(parseRooms(buyer.desired_rooms));
+    setEditTypes(parseArr(buyer.desired_type));
+    setEditRooms(parseArr(buyer.desired_rooms));
     try { setEditLocations(JSON.parse(buyer.preferred_locations||'[]')); } catch { setEditLocations([]); }
     setEditMode(true);
   };
@@ -103,7 +106,7 @@ export default function BuyerDetailPage({ params }: { params: Promise<{ id: stri
       body: JSON.stringify({
         first_name: firstName, last_name: lastName,
         phone: editForm.phone, email: editForm.email,
-        desired_type: editForm.desired_type,
+        desired_type: JSON.stringify(editTypes),
         desired_rooms: JSON.stringify(editRooms),
         financing: editForm.financing,
         budget: Number(editForm.budget)||null,
@@ -170,7 +173,8 @@ export default function BuyerDetailPage({ params }: { params: Promise<{ id: stri
     return 'badge-new';
   };
 
-  const buyerRooms = parseRooms(buyer.desired_rooms);
+  const buyerTypes = parseArr(buyer.desired_type);
+  const buyerRooms = parseArr(buyer.desired_rooms);
   let buyerLocs: string[] = [];
   try { buyerLocs = JSON.parse(buyer.preferred_locations||'[]'); } catch { /* ignore */ }
 
@@ -182,7 +186,7 @@ export default function BuyerDetailPage({ params }: { params: Promise<{ id: stri
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:24,flexWrap:'wrap',gap:12}}>
         <div>
           <h2 style={{margin:0,fontSize:'1.5rem'}}>{buyer.first_name} {buyer.last_name}</h2>
-          <p style={{color:'var(--gray-300)',margin:'4px 0 0'}}>{buyer.desired_type ? `Traži: ${buyer.desired_type}` : 'Kupac'}</p>
+          <p style={{color:'var(--gray-300)',margin:'4px 0 0'}}>{buyerTypes.length > 0 ? `Traži: ${buyerTypes.join(', ')}` : 'Kupac'}</p>
         </div>
         <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
           {editMode ? (<>
@@ -206,11 +210,28 @@ export default function BuyerDetailPage({ params }: { params: Promise<{ id: stri
                 <div className="form-group"><label>Telefon</label><input className="form-input" value={editForm.phone||''} onChange={e=>setEditForm({...editForm,phone:e.target.value})} /></div>
                 <div className="form-group"><label>Email</label><input className="form-input" value={editForm.email||''} onChange={e=>setEditForm({...editForm,email:e.target.value})} /></div>
               </div>
-              <div className="form-row">
-                <div className="form-group"><label>Tip Nekretnine</label><select className="form-select" value={editForm.desired_type||''} onChange={e=>setEditForm({...editForm,desired_type:e.target.value})}><option value="">-</option><option>Stan</option><option>Kuća</option><option>Plac</option><option>Lokal</option></select></div>
-                <div className="form-group"><label>Način Finansiranja</label><select className="form-select" value={editForm.financing||''} onChange={e=>setEditForm({...editForm,financing:e.target.value})}><option value="">-</option><option>Keš</option><option>Kredit</option><option>Kombinovano</option></select></div>
+              {/* Multi-select tip nekretnine */}
+              <div className="form-group">
+                <label>Tip Nekretnine</label>
+                <div style={{display:'flex',flexWrap:'wrap',gap:6,marginTop:6}}>
+                  {TYPE_OPTIONS.map(t => {
+                    const sel = editTypes.includes(t);
+                    return (
+                      <label key={t} style={{display:'flex',alignItems:'center',gap:4,fontSize:'0.82rem',padding:'5px 14px',borderRadius:20,cursor:'pointer',userSelect:'none',
+                        background:sel?'rgba(212,175,55,0.2)':'rgba(255,255,255,0.04)',
+                        border:`1px solid ${sel?'rgba(212,175,55,0.4)':'rgba(255,255,255,0.08)'}`,
+                        color:sel?'var(--gold)':'var(--gray-300)',transition:'all 0.15s',fontWeight:sel?600:400}}>
+                        <input type="checkbox" checked={sel} onChange={e=>{
+                          setEditTypes(e.target.checked ? [...editTypes, t] : editTypes.filter(x=>x!==t));
+                        }} style={{display:'none'}} />
+                        {sel?'✓ ':''}{t}
+                      </label>
+                    );
+                  })}
+                </div>
               </div>
               <div className="form-row">
+                <div className="form-group"><label>Način Finansiranja</label><select className="form-select" value={editForm.financing||''} onChange={e=>setEditForm({...editForm,financing:e.target.value})}><option value="">-</option><option>Keš</option><option>Kredit</option><option>Kombinovano</option></select></div>
                 <div className="form-group"><label>Budžet (€)</label><input className="form-input" type="number" value={editForm.budget||''} onChange={e=>setEditForm({...editForm,budget:e.target.value})} /></div>
               </div>
               {/* Multi-select sobe */}
@@ -257,7 +278,7 @@ export default function BuyerDetailPage({ params }: { params: Promise<{ id: stri
             </>) : (<>
               <div className="detail-row"><span className="detail-label">Telefon</span><span className="detail-value"><a href={`tel:${buyer.phone}`} style={{color:'var(--gold)'}}>{buyer.phone}</a></span></div>
               <div className="detail-row"><span className="detail-label">Email</span><span className="detail-value"><a href={`mailto:${buyer.email}`} style={{color:'var(--gold)'}}>{buyer.email}</a></span></div>
-              <div className="detail-row"><span className="detail-label">Tip</span><span className="detail-value">{buyer.desired_type||'-'}</span></div>
+              <div className="detail-row"><span className="detail-label">Tip</span><span className="detail-value">{buyerTypes.length > 0 ? buyerTypes.join(', ') : '-'}</span></div>
               <div className="detail-row"><span className="detail-label">Željene Sobe</span><span className="detail-value" style={{color:'var(--gold)',fontWeight:500}}>{buyerRooms.length > 0 ? buyerRooms.map(r => roomShort(r)).join(', ') : '-'}</span></div>
               <div className="detail-row"><span className="detail-label">Finansiranje</span><span className="detail-value"><span style={{padding:'3px 10px',borderRadius:6,fontSize:'0.82rem',background:buyer.financing==='Keš'?'rgba(76,175,80,0.12)':buyer.financing==='Kredit'?'rgba(33,150,243,0.12)':buyer.financing==='Kombinovano'?'rgba(255,152,0,0.12)':'transparent',color:buyer.financing==='Keš'?'#66bb6a':buyer.financing==='Kredit'?'#64b5f6':buyer.financing==='Kombinovano'?'#ffb74d':'var(--gray-300)'}}>{buyer.financing||'-'}</span></span></div>
               <div className="detail-row"><span className="detail-label">Budžet</span><span className="detail-value" style={{color:'var(--gold)'}}>€{buyer.budget?.toLocaleString('sr-RS')||'-'}</span></div>

@@ -33,7 +33,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const headersList = await headers();
   const user = getCurrentUser(headersList.get('cookie'));
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!user) return NextResponse.json({ error: 'Sesija istekla — ulogujte se ponovo' }, { status: 401 });
 
   try {
     const body = await request.json();

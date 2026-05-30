@@ -32,7 +32,7 @@ export function login(username: string, password: string): string | null {
   const token = jwt.sign(
     { id: user.id, username: user.username, full_name: user.full_name, role: user.role },
     JWT_SECRET,
-    { expiresIn: '24h' }
+    { expiresIn: '7d' }
   );
 
   return token;

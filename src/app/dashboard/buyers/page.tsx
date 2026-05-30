@@ -33,7 +33,9 @@ const ROOM_OPTIONS = [
   { value: '4+', label: '4+' },
 ];
 
-function parseRooms(val: string): string[] {
+const TYPE_OPTIONS = ['Stan', 'Kuća', 'Plac', 'Lokal'];
+
+function parseArr(val: string): string[] {
   if (!val) return [];
   try { const arr = JSON.parse(val); return Array.isArray(arr) ? arr : [val]; } catch { return val ? [val] : []; }
 }
@@ -56,7 +58,7 @@ export default function BuyersPage() {
   const [showModal, setShowModal] = useState(false);
   const [toast, setToast] = useState<{msg:string;type:string}|null>(null);
   const [form, setForm] = useState({
-    full_name:'',phone:'',email:'',desired_type:'',location:'',
+    full_name:'',phone:'',email:'',desired_type:[] as string[],location:'',
     budget:'',notes:'',next_action_date:'',status:'Aktivan',
     financing:'',desired_rooms:[] as string[],preferred_locations:[] as string[]
   });
@@ -76,9 +78,12 @@ export default function BuyersPage() {
 
   // Client-side filtering for type, rooms, budget, location
   const filteredBuyers = buyers.filter(b => {
-    if (filterType && b.desired_type !== filterType) return false;
+    if (filterType) {
+      const types = parseArr(b.desired_type);
+      if (!types.includes(filterType)) return false;
+    }
     if (filterRooms) {
-      const rooms = parseRooms(b.desired_rooms);
+      const rooms = parseArr(b.desired_rooms);
       if (!rooms.includes(filterRooms)) return false;
     }
     if (filterBudget) {
@@ -115,7 +120,7 @@ export default function BuyersPage() {
       body: JSON.stringify({
         first_name: firstName, last_name: lastName,
         phone: form.phone, email: form.email,
-        desired_type: form.desired_type,
+        desired_type: JSON.stringify(form.desired_type),
         desired_rooms: JSON.stringify(form.desired_rooms),
         financing: form.financing,
         budget: Number(form.budget)||null,
@@ -128,7 +133,7 @@ export default function BuyersPage() {
     });
     if (res.ok) {
       showToast('Kupac kreiran!'); setShowModal(false); load();
-      setForm({full_name:'',phone:'',email:'',desired_type:'',location:'',budget:'',notes:'',next_action_date:'',status:'Aktivan',financing:'',desired_rooms:[],preferred_locations:[]});
+      setForm({full_name:'',phone:'',email:'',desired_type:[],location:'',budget:'',notes:'',next_action_date:'',status:'Aktivan',financing:'',desired_rooms:[],preferred_locations:[]});
     } else { const d = await res.json(); showToast(d.error||'Greška','error'); }
   };
 
@@ -140,9 +145,9 @@ export default function BuyersPage() {
 
   // Collect unique locations from all buyers for filter
   const allLocations = Array.from(new Set(buyers.flatMap(b => parseLocs(b.preferred_locations)))).sort();
-  // Collect unique types
-  const allTypes = Array.from(new Set(buyers.map(b => b.desired_type).filter(Boolean)));
-  const typeOptions = Array.from(new Set([...allTypes, 'Stan', 'Kuća', 'Plac', 'Lokal']));
+  // Collect unique types from existing data + standard options
+  const allTypes = Array.from(new Set(buyers.flatMap(b => parseArr(b.desired_type)).filter(Boolean)));
+  const typeOptions = Array.from(new Set([...TYPE_OPTIONS, ...allTypes.filter(t => !TYPE_OPTIONS.includes(t))]));
 
   const hasFilters = filterType || filterRooms || filterBudget || filterLocation;
 
@@ -198,14 +203,15 @@ export default function BuyersPage() {
             </tr></thead>
             <tbody>
               {filteredBuyers.map(b => {
-                const rooms = parseRooms(b.desired_rooms);
+                const types = parseArr(b.desired_type);
+                const rooms = parseArr(b.desired_rooms);
                 const locs = parseLocs(b.preferred_locations);
                 const fu = getFollowUp(b.next_action_date);
                 return (
                   <tr key={b.id}>
                     <td><Link href={`/dashboard/buyers/${b.id}`} style={{color:'#fff',fontWeight:500}}>{b.first_name} {b.last_name}</Link></td>
                     <td style={{fontSize:'0.85rem'}}>{b.phone}</td>
-                    <td><span className="badge badge-new" style={{fontSize:'0.72rem'}}>{b.desired_type||'-'}</span></td>
+                    <td style={{fontSize:'0.8rem'}}>{types.length > 0 ? types.join(', ') : '-'}</td>
                     <td style={{fontSize:'0.85rem',color:'var(--gold)',fontWeight:500}}>{rooms.length > 0 ? rooms.map(r => roomShort(r)).join(', ') : '-'}</td>
                     <td>
                       <div style={{display:'flex',flexWrap:'wrap',gap:3,maxWidth:220}}>
@@ -246,24 +252,36 @@ export default function BuyersPage() {
                   <div className="form-group"><label>Telefon</label><input className="form-input" value={form.phone} onChange={e=>setForm({...form,phone:e.target.value})} /></div>
                   <div className="form-group"><label>Email</label><input className="form-input" type="email" value={form.email} onChange={e=>setForm({...form,email:e.target.value})} /></div>
                 </div>
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>Tip Nekretnine</label>
-                    <select className="form-select" value={form.desired_type} onChange={e=>setForm({...form,desired_type:e.target.value})}>
-                      <option value="">-</option><option>Stan</option><option>Kuća</option><option>Plac</option><option>Lokal</option>
-                    </select>
+                {/* Multi-select tip nekretnine */}
+                <div className="form-group">
+                  <label>Tip Nekretnine</label>
+                  <div style={{display:'flex',flexWrap:'wrap',gap:6,marginTop:6}}>
+                    {TYPE_OPTIONS.map(t => {
+                      const sel = form.desired_type.includes(t);
+                      return (
+                        <label key={t} style={{display:'flex',alignItems:'center',gap:4,fontSize:'0.82rem',padding:'5px 14px',borderRadius:20,cursor:'pointer',userSelect:'none',
+                          background:sel?'rgba(212,175,55,0.2)':'rgba(255,255,255,0.04)',
+                          border:`1px solid ${sel?'rgba(212,175,55,0.4)':'rgba(255,255,255,0.08)'}`,
+                          color:sel?'var(--gold)':'var(--gray-300)',transition:'all 0.15s',fontWeight:sel?600:400}}>
+                          <input type="checkbox" checked={sel} onChange={e=>{
+                            setForm({...form, desired_type: e.target.checked ? [...form.desired_type, t] : form.desired_type.filter(x=>x!==t)});
+                          }} style={{display:'none'}} />
+                          {sel?'✓ ':''}{t}
+                        </label>
+                      );
+                    })}
                   </div>
+                </div>
+                <div className="form-row">
                   <div className="form-group">
                     <label>Način Finansiranja</label>
                     <select className="form-select" value={form.financing} onChange={e=>setForm({...form,financing:e.target.value})}>
                       <option value="">-</option><option>Keš</option><option>Kredit</option><option>Kombinovano</option>
                     </select>
                   </div>
-                </div>
-                <div className="form-row">
                   <div className="form-group"><label>Budžet (€)</label><input className="form-input" type="number" value={form.budget} onChange={e=>setForm({...form,budget:e.target.value})} /></div>
-                  <div className="form-group"><label>Sledeća Akcija</label><input className="form-input" type="date" value={form.next_action_date} onChange={e=>setForm({...form,next_action_date:e.target.value})} /></div>
                 </div>
+                <div className="form-group"><label>Sledeća Akcija</label><input className="form-input" type="date" value={form.next_action_date} onChange={e=>setForm({...form,next_action_date:e.target.value})} /></div>
                 {/* Multi-select sobe */}
                 <div className="form-group">
                   <label>Željene Sobe</label>
