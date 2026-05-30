@@ -52,7 +52,7 @@ export default function BuyersPage() {
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [filterRooms, setFilterRooms] = useState('');
-  const [filterBudget, setFilterBudget] = useState('');
+  const [filterBudgetMin, setFilterBudgetMin] = useState('');  const [filterBudgetMax, setFilterBudgetMax] = useState('');
   const [filterLocation, setFilterLocation] = useState('');
   const [filterType, setFilterType] = useState('');
   const [showModal, setShowModal] = useState(false);
@@ -86,12 +86,10 @@ export default function BuyersPage() {
       const rooms = parseArr(b.desired_rooms);
       if (!rooms.includes(filterRooms)) return false;
     }
-    if (filterBudget) {
+    if (filterBudgetMin || filterBudgetMax) {
       const budget = b.budget || 0;
-      if (filterBudget === '0-100' && budget > 100000) return false;
-      if (filterBudget === '100-150' && (budget < 100000 || budget > 150000)) return false;
-      if (filterBudget === '150-200' && (budget < 150000 || budget > 200000)) return false;
-      if (filterBudget === '200+' && budget < 200000) return false;
+      if (filterBudgetMin && budget < Number(filterBudgetMin)) return false;
+      if (filterBudgetMax && budget > Number(filterBudgetMax)) return false;
     }
     if (filterLocation) {
       const locs = parseLocs(b.preferred_locations);
@@ -149,7 +147,7 @@ export default function BuyersPage() {
   const allTypes = Array.from(new Set(buyers.flatMap(b => parseArr(b.desired_type)).filter(Boolean)));
   const typeOptions = Array.from(new Set([...TYPE_OPTIONS, ...allTypes.filter(t => !TYPE_OPTIONS.includes(t))]));
 
-  const hasFilters = filterType || filterRooms || filterBudget || filterLocation;
+  const hasFilters = filterType || filterRooms || filterBudgetMin || filterBudgetMax || filterLocation;
 
   return (
     <>
@@ -181,19 +179,18 @@ export default function BuyersPage() {
             <option value="">Sve sobe</option>
             {ROOM_OPTIONS.map(r => <option key={r.value} value={r.value}>{r.label} ({r.value})</option>)}
           </select>
-          <select className="filter-select" value={filterBudget} onChange={e=>setFilterBudget(e.target.value)} style={{fontSize:'0.78rem',padding:'5px 24px 5px 8px'}}>
-            <option value="">Svi budžeti</option>
-            <option value="0-100">Do €100k</option>
-            <option value="100-150">€100k - €150k</option>
-            <option value="150-200">€150k - €200k</option>
-            <option value="200+">Preko €200k</option>
-          </select>
+          <div style={{display:'flex',alignItems:'center',gap:4}}>
+            <span style={{fontSize:'0.72rem',color:'var(--gray-400)',whiteSpace:'nowrap'}}>Budžet €</span>
+            <input type="number" placeholder="Od" value={filterBudgetMin} onChange={e=>setFilterBudgetMin(e.target.value)} style={{width:80,fontSize:'0.78rem',padding:'5px 8px',borderRadius:6,border:'1px solid rgba(212,175,55,0.15)',background:'rgba(255,255,255,0.04)',color:'#fff',outline:'none'}} />
+            <span style={{fontSize:'0.72rem',color:'var(--gray-400)'}}>–</span>
+            <input type="number" placeholder="Do" value={filterBudgetMax} onChange={e=>setFilterBudgetMax(e.target.value)} style={{width:80,fontSize:'0.78rem',padding:'5px 8px',borderRadius:6,border:'1px solid rgba(212,175,55,0.15)',background:'rgba(255,255,255,0.04)',color:'#fff',outline:'none'}} />
+          </div>
           <select className="filter-select" value={filterLocation} onChange={e=>setFilterLocation(e.target.value)} style={{fontSize:'0.78rem',padding:'5px 24px 5px 8px'}}>
             <option value="">Sve lokacije</option>
             {allLocations.map(l => <option key={l}>{l}</option>)}
           </select>
           {hasFilters && (
-            <button onClick={()=>{setFilterType('');setFilterRooms('');setFilterBudget('');setFilterLocation('');}} style={{fontSize:'0.75rem',padding:'4px 10px',borderRadius:6,background:'rgba(255,77,77,0.1)',border:'1px solid rgba(255,77,77,0.2)',color:'#ff6b6b',cursor:'pointer'}}>✕ Resetuj filtere</button>
+            <button onClick={()=>{setFilterType('');setFilterRooms('');setFilterBudgetMin('');setFilterBudgetMax('');setFilterLocation('');}} style={{fontSize:'0.75rem',padding:'4px 10px',borderRadius:6,background:'rgba(255,77,77,0.1)',border:'1px solid rgba(255,77,77,0.2)',color:'#ff6b6b',cursor:'pointer'}}>✕ Resetuj filtere</button>
           )}
         </div>
         <div className="table-overflow">
