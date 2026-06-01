@@ -77,9 +77,9 @@ export async function POST(request: Request) {
     }
 
     if (!body.type || typeof body.type !== 'string') {
-      errors.push('type: obavezan — mora biti jedno od: Novogradnja, Starogradnja, Rente, Lokali');
-    } else if (!['Novogradnja', 'Starogradnja', 'Rente', 'Lokali'].includes(body.type)) {
-      errors.push(`type: "${body.type}" nije validan — mora biti: Novogradnja, Starogradnja, Rente, Lokali`);
+      errors.push('type: obavezan — mora biti jedno od: Novogradnja, Sekundarni Stanovi, Rente, Lokali');
+    } else if (!['Novogradnja', 'Sekundarni Stanovi', 'Rente', 'Lokali'].includes(body.type)) {
+      errors.push(`type: "${body.type}" nije validan — mora biti: Novogradnja, Sekundarni Stanovi, Rente, Lokali`);
     }
 
     if (!body.owner_id || typeof body.owner_id !== 'string') {
@@ -127,7 +127,7 @@ export async function POST(request: Request) {
             title: 'string — naziv nekretnine',
             location: 'string — lokacija/naselje',
             price: 'number — cena u EUR (bez teksta)',
-            type: 'enum — Novogradnja | Starogradnja | Rente | Lokali',
+            type: 'enum — Novogradnja | Sekundarni Stanovi | Rente | Lokali',
             owner_id: 'string — UUID vlasnika (GET /api/bot/owners)',
           },
           optional: {

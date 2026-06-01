@@ -70,8 +70,8 @@ export async function POST(request: Request) {
       errors.push(`status: "${body.status}" nije validan — mora biti: Aktivan, Pauzirana Potraga, Kupio Stan`);
     }
 
-    if (body.desired_type && !['Novogradnja', 'Starogradnja', 'Rente', 'Lokali'].includes(body.desired_type)) {
-      errors.push(`desired_type: "${body.desired_type}" nije validan — mora biti: Novogradnja, Starogradnja, Rente, Lokali`);
+    if (body.desired_type && !['Novogradnja', 'Sekundarni Stanovi', 'Rente', 'Lokali'].includes(body.desired_type)) {
+      errors.push(`desired_type: "${body.desired_type}" nije validan — mora biti: Novogradnja, Sekundarni Stanovi, Rente, Lokali`);
     }
 
     if (errors.length > 0) {
@@ -86,7 +86,7 @@ export async function POST(request: Request) {
           optional: {
             phone: 'string — telefon kupca',
             email: 'string — email kupca',
-            desired_type: 'enum — Novogradnja | Starogradnja | Rente | Lokali',
+            desired_type: 'enum — Novogradnja | Sekundarni Stanovi | Rente | Lokali',
             desired_rooms: 'string — željena sobnost, npr. "Jednosoban", "Dvosoban", "Trosoban"',
             financing: 'string — Keš | Kredit | Kombinovano',
             budget: 'number — budžet u EUR',

@@ -53,8 +53,8 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       errors.push('location: mora biti neprazan string');
     }
 
-    if (body.type !== undefined && !['Novogradnja', 'Starogradnja', 'Rente', 'Lokali'].includes(body.type)) {
-      errors.push(`type: "${body.type}" nije validan — mora biti: Novogradnja, Starogradnja, Rente, Lokali`);
+    if (body.type !== undefined && !['Novogradnja', 'Sekundarni Stanovi', 'Rente', 'Lokali'].includes(body.type)) {
+      errors.push(`type: "${body.type}" nije validan — mora biti: Novogradnja, Sekundarni Stanovi, Rente, Lokali`);
     }
 
     if (body.status !== undefined && !['Aktivna', 'Prodato', 'U pregovoru'].includes(body.status)) {

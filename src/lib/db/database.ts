@@ -64,7 +64,7 @@ function initializeSchema(database: Database.Database) {
       notes TEXT DEFAULT '',
       location TEXT NOT NULL,
       price REAL NOT NULL,
-      type TEXT CHECK(type IN ('Novogradnja','Starogradnja','Rente','Lokali')) NOT NULL,
+      type TEXT CHECK(type IN ('Novogradnja','Sekundarni Stanovi','Rente','Lokali')) NOT NULL,
       area REAL,
       rooms INTEGER,
       status TEXT CHECK(status IN ('Aktivna','Prodato','U pregovoru')) DEFAULT 'Aktivna',
@@ -183,6 +183,9 @@ function initializeSchema(database: Database.Database) {
   // Backfill: assign codes to existing properties that don't have one
   backfillPropertyCodes(database);
 
+  // Migrate: rename Starogradnja -> Sekundarni Stanovi and move standalone Novogradnja
+  migratePropertyTypes(database);
+
   // Seed admin user and default agent if no users exist (first run only)
   const userCount = database.prepare('SELECT COUNT(*) as count FROM users').get() as { count: number };
   if (userCount.count === 0) {
@@ -210,7 +213,7 @@ function seedAdminUsers(database: Database.Database) {
 // ── Property Code Generator ──
 const TYPE_PREFIX: Record<string, string> = {
   'Novogradnja': 'n',
-  'Starogradnja': 's',
+  'Sekundarni Stanovi': 's',
   'Lokali': 'l',
   'Rente': 'r',
 };
@@ -246,5 +249,12 @@ function backfillPropertyCodes(database: Database.Database) {
     }
   });
   txn();
+}
+
+function migratePropertyTypes(database: Database.Database) {
+  // Rename Starogradnja -> Sekundarni Stanovi
+  database.prepare(`UPDATE properties SET type = 'Sekundarni Stanovi' WHERE type = 'Starogradnja'`).run();
+  // Move standalone Novogradnja (no project) -> Sekundarni Stanovi
+  database.prepare(`UPDATE properties SET type = 'Sekundarni Stanovi' WHERE type = 'Novogradnja' AND (project_id IS NULL OR project_id = '')`).run();
 }
 

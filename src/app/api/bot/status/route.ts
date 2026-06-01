@@ -35,7 +35,7 @@ export async function GET() {
       'GET /api/bot/owners': 'Lista vlasnika (?search=ime)',
       'POST /api/bot/owners': 'Kreiraj vlasnika (first_name, last_name obavezni)',
     },
-    property_types: ['Novogradnja', 'Starogradnja', 'Lokali', 'Rente'],
+    property_types: ['Novogradnja', 'Sekundarni Stanovi', 'Lokali', 'Rente'],
     property_statuses: ['Aktivna', 'Prodato', 'U pregovoru'],
   });
 }

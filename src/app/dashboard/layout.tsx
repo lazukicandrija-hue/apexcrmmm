@@ -6,7 +6,7 @@ import Link from 'next/link';
 interface User { id: string; username: string; full_name: string; role: string; }
 interface SearchResult { type:string; id:string; title:string; subtitle:string; badge:string; href:string; icon:string; }
 
-const PONUDA_TYPES = ['Novogradnja', 'Starogradnja', 'Kuće', 'Lokali', 'Rente'];
+const PONUDA_TYPES = ['Novogradnja', 'Sekundarni Stanovi', 'Kuće', 'Lokali', 'Rente'];
 
 function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -70,7 +70,7 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
     if (pathname.includes('properties')) {
       if (currentCategory === 'Rente') return 'Rente';
       if (currentCategory === 'Novogradnja') return 'Novogradnja';
-      if (currentCategory === 'Starogradnja') return 'Starogradnja';
+      if (currentCategory === 'Sekundarni Stanovi') return 'Sekundarni Stanovi';
       if (currentCategory === 'Kuće') return 'Kuće';
       if (currentCategory === 'Lokali') return 'Lokali';
       if (PONUDA_TYPES.some(t => t === currentCategory)) return currentCategory;
@@ -121,10 +121,10 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
               onClick={() => setSidebarOpen(false)}>
               <span>🏗️</span> Novogradnja
             </Link>
-            <Link href="/dashboard/properties?category=Starogradnja"
-              className={`nav-item nav-sub ${isActive('/dashboard/properties?category=Starogradnja') ? 'active' : ''}`}
+            <Link href="/dashboard/properties?category=Sekundarni Stanovi"
+              className={`nav-item nav-sub ${isActive('/dashboard/properties?category=Sekundarni Stanovi') ? 'active' : ''}`}
               onClick={() => setSidebarOpen(false)}>
-              <span>🏛️</span> Starogradnja
+              <span>🏛️</span> Sekundarni Stanovi
             </Link>
             <Link href="/dashboard/properties?category=Lokali"
               className={`nav-item nav-sub ${isActive('/dashboard/properties?category=Lokali') ? 'active' : ''}`}

@@ -14,7 +14,7 @@ interface Project { id:string; name:string; location:string; description:string;
 
 const CATEGORY_LABELS: Record<string, string> = {
   'Novogradnja': 'Novogradnja',
-  'Starogradnja': 'Starogradnja',
+  'Sekundarni Stanovi': 'Sekundarni Stanovi',
   'Lokali': 'Lokali',
   'Rente': 'Rente',
 };
@@ -47,7 +47,7 @@ function PropertiesPageInner() {
   const [advFilters, setAdvFilters] = useState({minPrice:'',maxPrice:'',minRooms:'',maxRooms:'',minArea:'',maxArea:'',floor:'',parking:'',heating:'',terrace:'',owner:'',location:''});
   const [toast, setToast] = useState<{msg:string;type:string}|null>(null);
   const [form, setForm] = useState({
-    title:'',description:'',location:'',price:'',type:category || 'Novogradnja',area:'',rooms:'',
+    title:'',description:'',location:'',price:'',type:category || 'Sekundarni Stanovi',area:'',rooms:'',
     status:'Aktivna',owner_id:'',newOwnerName:'',newOwnerPhone:'',
     newOwnerEmail:'',newOwnerNotes:'',createNewOwner:true,
     floor:'',condition:'',parking:'',terrace:'',heating:'',
@@ -126,7 +126,7 @@ function PropertiesPageInner() {
         showToast('Nekretnina kreirana!');
         setShowModal(false);
         load();
-        setForm({title:'',description:'',location:'',price:'',type:category || 'Novogradnja',area:'',rooms:'',status:'Aktivna',owner_id:'',newOwnerName:'',newOwnerPhone:'',newOwnerEmail:'',newOwnerNotes:'',createNewOwner:true,floor:'',condition:'',parking:'',terrace:'',heating:'',street:'',building_number:'',apartment_number:'',project_id:''});
+        setForm({title:'',description:'',location:'',price:'',type:category || 'Sekundarni Stanovi',area:'',rooms:'',status:'Aktivna',owner_id:'',newOwnerName:'',newOwnerPhone:'',newOwnerEmail:'',newOwnerNotes:'',createNewOwner:true,floor:'',condition:'',parking:'',terrace:'',heating:'',street:'',building_number:'',apartment_number:'',project_id:''});
       } else {
         const d = await res.json();
         showToast(d.error||'Greška pri kreiranju nekretnine','error');
@@ -238,7 +238,7 @@ function PropertiesPageInner() {
             <button className="btn-outline btn-sm" onClick={()=>setShowFeatured(!showFeatured)} style={{borderColor: featuredList.length > 0 ? 'rgba(212,175,55,0.6)' : undefined}}>⭐ Istaknuti ({featuredList.length})</button>
             <a href="/api/export/properties" className="btn-outline btn-sm">📥 CSV</a>
             {isNovogradnja && <button className="btn-outline btn-sm" onClick={()=>setShowProjectModal(true)} style={{borderColor:'rgba(212,175,55,0.4)'}}>🏗️ + Projekat</button>}
-            <button className="btn-gold btn-sm" onClick={()=>setShowModal(true)}>+ Dodaj Stan</button>
+            {!isNovogradnja && <button className="btn-gold btn-sm" onClick={()=>setShowModal(true)}>+ Dodaj Stan</button>}
           </div>
         </div>
         {showAdvanced && (
@@ -342,8 +342,8 @@ function PropertiesPageInner() {
           </div>
         )}
 
-        {/* Standalone properties (or all for non-Novogradnja) */}
-        {isNovogradnja && standaloneProperties.length > 0 && <div style={{fontSize:'0.85rem',color:'var(--gray-300)',padding:'8px 0',fontWeight:600,fontFamily:'Cinzel,serif'}}>Pojedinačni Stanovi</div>}
+        {/* Main properties table - hidden for Novogradnja since it only shows projects */}
+        {!isNovogradnja && (
         <div className="table-overflow">
           <table className="data-table">
             <thead>
@@ -380,11 +380,15 @@ function PropertiesPageInner() {
                   <td><button className="btn-danger btn-sm" onClick={()=>handleDelete(p.id)}>🗑</button></td>
                 </tr>
               ))}
-              {standaloneProperties.length===0 && !isNovogradnja && <tr><td colSpan={category ? 10 : 11} style={{textAlign:'center',padding:40,color:'var(--gray-300)'}}>Nema nekretnina u kategoriji {pageTitle}</td></tr>}
-              {standaloneProperties.length===0 && isNovogradnja && projects.length===0 && <tr><td colSpan={9} style={{textAlign:'center',padding:40,color:'var(--gray-300)'}}>Nema nekretnina u kategoriji {pageTitle}</td></tr>}
+              {standaloneProperties.length===0 && <tr><td colSpan={category ? 10 : 11} style={{textAlign:'center',padding:40,color:'var(--gray-300)'}}>Nema nekretnina u kategoriji {pageTitle}</td></tr>}
             </tbody>
           </table>
         </div>
+        )}
+        {/* Novogradnja empty state when no projects */}
+        {isNovogradnja && projects.length === 0 && (
+          <div style={{textAlign:'center',padding:40,color:'var(--gray-300)',fontSize:'0.9rem'}}>Nema projekata. Kliknite "🏗️ + Projekat" da dodate prvi projekat.</div>
+        )}
       </div>
 
       {showModal && (
@@ -431,7 +435,7 @@ function PropertiesPageInner() {
                   <div className="form-group">
                     <label>Tip</label>
                     <select className="form-select" value={form.type} onChange={e=>setForm({...form,type:e.target.value})}>
-                      <option>Novogradnja</option><option>Starogradnja</option><option>Kuće</option><option>Lokali</option><option>Rente</option>
+                      <option>Novogradnja</option><option>Sekundarni Stanovi</option><option>Kuće</option><option>Lokali</option><option>Rente</option>
                     </select>
                   </div>
                   <div className="form-group">
@@ -441,15 +445,7 @@ function PropertiesPageInner() {
                     </select>
                   </div>
                 </div>
-                {(form.type === 'Novogradnja' || isNovogradnja) && projects.length > 0 && (
-                  <div className="form-group">
-                    <label>Projekat (opciono)</label>
-                    <select className="form-select" value={form.project_id} onChange={e=>setForm({...form,project_id:e.target.value})}>
-                      <option value="">Bez projekta — pojedinačan stan</option>
-                      {projects.map(pr=><option key={pr.id} value={pr.id}>{pr.name} — {pr.location}</option>)}
-                    </select>
-                  </div>
-                )}
+
                 <div className="form-row">
                   <div className="form-group">
                     <label>Površina (m²)</label>
