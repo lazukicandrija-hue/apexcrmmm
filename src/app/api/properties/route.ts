@@ -42,8 +42,8 @@ export async function GET(request: Request) {
   if (type) { query += ` AND p.type = ?`; params.push(type); }
   if (status) { query += ` AND p.status = ?`; params.push(status); }
   if (search) {
-    query += ` AND (p.title LIKE ? OR p.location LIKE ? OR p.description LIKE ? OR (o.first_name || ' ' || o.last_name) LIKE ?)`;
-    params.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
+    query += ` AND (p.title LIKE ? OR p.location LIKE ? OR p.description LIKE ? OR (o.first_name || ' ' || o.last_name) LIKE ? OR p.street LIKE ? OR p.building_number LIKE ? OR p.apartment_number LIKE ? OR p.code LIKE ?)`;
+    params.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
   }
   if (minPrice) { query += ` AND p.price >= ?`; params.push(Number(minPrice)); }
   if (maxPrice) { query += ` AND p.price <= ?`; params.push(Number(maxPrice)); }
