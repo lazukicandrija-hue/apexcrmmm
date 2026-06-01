@@ -252,9 +252,12 @@ function backfillPropertyCodes(database: Database.Database) {
 }
 
 function migratePropertyTypes(database: Database.Database) {
+  // Bypass old CHECK constraint on existing table during migration
+  database.pragma('ignore_check_constraints = ON');
   // Rename Starogradnja -> Sekundarni Stanovi
   database.prepare(`UPDATE properties SET type = 'Sekundarni Stanovi' WHERE type = 'Starogradnja'`).run();
   // Move standalone Novogradnja (no project) -> Sekundarni Stanovi
   database.prepare(`UPDATE properties SET type = 'Sekundarni Stanovi' WHERE type = 'Novogradnja' AND (project_id IS NULL OR project_id = '')`).run();
+  database.pragma('ignore_check_constraints = OFF');
 }
 
