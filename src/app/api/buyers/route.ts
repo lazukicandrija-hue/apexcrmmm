@@ -24,7 +24,7 @@ export async function GET(request: Request) {
     query += ` AND (first_name LIKE ? OR last_name LIKE ? OR phone LIKE ? OR email LIKE ?)`;
     params.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
   }
-  query += ' ORDER BY next_action_date ASC NULLS LAST';
+  query += ` ORDER BY CASE COALESCE(priority,'low') WHEN 'hot' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END ASC, next_action_date ASC NULLS LAST`;
 
   const buyers = db.prepare(query).all(...params);
   return NextResponse.json({ buyers });
@@ -41,14 +41,15 @@ export async function POST(request: Request) {
     const id = uuidv4();
 
     db.prepare(`
-      INSERT INTO buyers (id, first_name, last_name, phone, email, desired_type, location, budget, notes, next_action_date, status, financing, desired_rooms, preferred_locations)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO buyers (id, first_name, last_name, phone, email, desired_type, location, budget, notes, next_action_date, status, financing, desired_rooms, preferred_locations, priority)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       id, body.first_name, body.last_name, body.phone || '', body.email || '',
       body.desired_type || '', body.location || '', body.budget || null,
       body.notes || '', body.next_action_date || null, body.status || 'Novo',
       body.financing || '', body.desired_rooms || '',
-      body.preferred_locations ? JSON.stringify(body.preferred_locations) : ''
+      body.preferred_locations ? JSON.stringify(body.preferred_locations) : '',
+      body.priority || 'low'
     );
 
     if (body.notes) {

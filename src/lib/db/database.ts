@@ -174,6 +174,7 @@ function initializeSchema(database: Database.Database) {
   addColumnSafe('buyers', 'financing', 'TEXT');         // Keš, Kredit, Kombinovano
   addColumnSafe('buyers', 'desired_rooms', 'TEXT');     // 1, 2, 3, 4+
   addColumnSafe('buyers', 'preferred_locations', 'TEXT'); // JSON array of Novi Sad neighborhoods
+  addColumnSafe('buyers', 'priority', "TEXT DEFAULT 'low'");  // hot, medium, low
 
   // Migrate: add address detail fields for properties
   addColumnSafe('properties', 'street', 'TEXT');            // Ulica

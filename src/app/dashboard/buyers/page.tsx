@@ -7,6 +7,7 @@ interface Buyer {
   desired_type:string; location:string; budget:number; notes:string;
   next_action_date:string; status:string; created_at:string;
   financing:string; desired_rooms:string; preferred_locations:string;
+  priority:string;
 }
 
 const NOVI_SAD_LOKACIJE = [
@@ -60,7 +61,8 @@ export default function BuyersPage() {
   const [form, setForm] = useState({
     full_name:'',phone:'',email:'',desired_type:[] as string[],location:'',
     budget:'',notes:'',next_action_date:'',status:'Aktivan',
-    financing:'',desired_rooms:[] as string[],preferred_locations:[] as string[]
+    financing:'',desired_rooms:[] as string[],preferred_locations:[] as string[],
+    priority:'low'
   });
 
   const today = new Date().toISOString().split('T')[0];
@@ -127,11 +129,12 @@ export default function BuyersPage() {
         notes: form.notes,
         next_action_date: form.next_action_date,
         status: form.status,
+        priority: form.priority,
       })
     });
     if (res.ok) {
       showToast('Kupac kreiran!'); setShowModal(false); load();
-      setForm({full_name:'',phone:'',email:'',desired_type:[],location:'',budget:'',notes:'',next_action_date:'',status:'Aktivan',financing:'',desired_rooms:[],preferred_locations:[]});
+      setForm({full_name:'',phone:'',email:'',desired_type:[],location:'',budget:'',notes:'',next_action_date:'',status:'Aktivan',financing:'',desired_rooms:[],preferred_locations:[],priority:'low'});
     } else { const d = await res.json(); showToast(d.error||'Greška','error'); }
   };
 
@@ -196,7 +199,7 @@ export default function BuyersPage() {
         <div className="table-overflow">
           <table className="data-table">
             <thead><tr>
-              <th>Ime</th><th>Telefon</th><th>Tip</th><th>Sobe</th><th>Lokacije</th><th>Budžet</th><th>Sledeća Akcija</th><th>Status</th><th>Akcije</th>
+              <th style={{width:50}}></th><th>Ime</th><th>Telefon</th><th>Tip</th><th>Sobe</th><th>Lokacije</th><th>Budžet</th><th>Sledeća Akcija</th><th>Status</th><th>Akcije</th>
             </tr></thead>
             <tbody>
               {filteredBuyers.map(b => {
@@ -204,8 +207,20 @@ export default function BuyersPage() {
                 const rooms = parseArr(b.desired_rooms);
                 const locs = parseLocs(b.preferred_locations);
                 const fu = getFollowUp(b.next_action_date);
+                const prio = b.priority || 'low';
+                const prioConfig = prio === 'hot'
+                  ? { label: '🔥 HOT', bg: 'rgba(239,68,68,0.15)', border: 'rgba(239,68,68,0.4)', color: '#ef4444', rowBg: 'rgba(239,68,68,0.04)' }
+                  : prio === 'medium'
+                  ? { label: '⚡ MED', bg: 'rgba(251,191,36,0.15)', border: 'rgba(251,191,36,0.4)', color: '#fbbf24', rowBg: 'rgba(251,191,36,0.03)' }
+                  : { label: '', bg: 'transparent', border: 'rgba(255,255,255,0.08)', color: 'var(--gray-400)', rowBg: 'transparent' };
+                const nextPrio = prio === 'low' ? 'medium' : prio === 'medium' ? 'hot' : 'low';
+                const cyclePriority = async () => {
+                  await fetch(`/api/buyers/${b.id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ priority: nextPrio }) });
+                  load();
+                };
                 return (
-                  <tr key={b.id}>
+                  <tr key={b.id} style={{background: prioConfig.rowBg}}>
+                    <td><button onClick={cyclePriority} title={`Prioritet: ${prio} → ${nextPrio}`} style={{background:prioConfig.bg,border:`1px solid ${prioConfig.border}`,borderRadius:6,padding:'4px 8px',cursor:'pointer',fontSize:'0.72rem',fontWeight:700,color:prioConfig.color,transition:'all 0.2s',minWidth:52,textAlign:'center'}}>{prioConfig.label || '—'}</button></td>
                     <td><Link href={`/dashboard/buyers/${b.id}`} style={{color:'#fff',fontWeight:500}}>{b.first_name} {b.last_name}</Link></td>
                     <td style={{fontSize:'0.85rem'}}>{b.phone}</td>
                     <td style={{fontSize:'0.8rem'}}>{types.length > 0 ? types.join(', ') : '-'}</td>
@@ -229,7 +244,7 @@ export default function BuyersPage() {
                   </tr>
                 );
               })}
-              {filteredBuyers.length===0 && <tr><td colSpan={9} style={{textAlign:'center',padding:40,color:'var(--gray-300)'}}>{buyers.length > 0 ? 'Nema kupaca sa ovim filterima' : 'Nema kupaca'}</td></tr>}
+              {filteredBuyers.length===0 && <tr><td colSpan={10} style={{textAlign:'center',padding:40,color:'var(--gray-300)'}}>{buyers.length > 0 ? 'Nema kupaca sa ovim filterima' : 'Nema kupaca'}</td></tr>}
             </tbody>
           </table>
         </div>
@@ -324,6 +339,16 @@ export default function BuyersPage() {
                   <select className="form-select" value={form.status} onChange={e=>setForm({...form,status:e.target.value})}>
                     <option>Aktivan</option><option>Pauzirana Potraga</option><option>Kupio Stan</option>
                   </select>
+                </div>
+                <div className="form-group">
+                  <label>Prioritet</label>
+                  <div style={{display:'flex',gap:8,marginTop:6}}>
+                    {(['low','medium','hot'] as const).map(p => {
+                      const cfg = p === 'hot' ? {label:'🔥 Hot',bg:'rgba(239,68,68,0.2)',border:'rgba(239,68,68,0.4)',color:'#ef4444'} : p === 'medium' ? {label:'⚡ Medium',bg:'rgba(251,191,36,0.2)',border:'rgba(251,191,36,0.4)',color:'#fbbf24'} : {label:'Low',bg:'rgba(255,255,255,0.04)',border:'rgba(255,255,255,0.08)',color:'var(--gray-300)'};
+                      const sel = form.priority === p;
+                      return <button key={p} type="button" onClick={()=>setForm({...form,priority:p})} style={{padding:'6px 16px',borderRadius:20,cursor:'pointer',fontSize:'0.82rem',fontWeight:sel?700:400,background:sel?cfg.bg:'transparent',border:`1px solid ${sel?cfg.border:'rgba(255,255,255,0.08)'}`,color:sel?cfg.color:'var(--gray-400)',transition:'all 0.15s'}}>{cfg.label}</button>;
+                    })}
+                  </div>
                 </div>
                 <div className="form-group"><label>Napomena</label><textarea className="form-textarea" value={form.location} onChange={e=>setForm({...form,location:e.target.value})} placeholder="Nešto specifično što je kupac rekao..." /></div>
                 <div className="form-group"><label>Detaljne Napomene</label><textarea className="form-textarea" value={form.notes} onChange={e=>setForm({...form,notes:e.target.value})} placeholder="Šta traži, posebni zahtevi..." /></div>

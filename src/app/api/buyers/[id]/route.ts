@@ -30,13 +30,16 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     const body = await request.json();
     const db = getDb();
 
-    // Partial update — just status or next_action_date
-    if (Object.keys(body).length <= 2 && (body.status !== undefined || body.next_action_date !== undefined)) {
+    // Partial update — just status, next_action_date, or priority
+    if (Object.keys(body).length <= 2 && (body.status !== undefined || body.next_action_date !== undefined || body.priority !== undefined)) {
       if (body.status !== undefined) {
         db.prepare('UPDATE buyers SET status = ? WHERE id = ?').run(body.status, id);
       }
       if (body.next_action_date !== undefined) {
         db.prepare('UPDATE buyers SET next_action_date = ? WHERE id = ?').run(body.next_action_date || null, id);
+      }
+      if (body.priority !== undefined) {
+        db.prepare('UPDATE buyers SET priority = ? WHERE id = ?').run(body.priority, id);
       }
       return NextResponse.json({ message: 'Kupac ažuriran' });
     }
@@ -45,13 +48,14 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     db.prepare(`
       UPDATE buyers SET first_name=?, last_name=?, phone=?, email=?, desired_type=?,
       location=?, budget=?, notes=?, next_action_date=?, status=?,
-      financing=?, desired_rooms=?, preferred_locations=? WHERE id=?
+      financing=?, desired_rooms=?, preferred_locations=?, priority=? WHERE id=?
     `).run(
       body.first_name, body.last_name, body.phone || '', body.email || '',
       body.desired_type || '', body.location || '', body.budget || null,
       body.notes || '', body.next_action_date || null, body.status || 'Aktivan',
       body.financing || '', body.desired_rooms || '',
       body.preferred_locations ? (typeof body.preferred_locations === 'string' ? body.preferred_locations : JSON.stringify(body.preferred_locations)) : '',
+      body.priority || 'low',
       id
     );
     return NextResponse.json({ message: 'Kupac ažuriran' });
