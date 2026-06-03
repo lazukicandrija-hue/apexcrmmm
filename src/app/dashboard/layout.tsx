@@ -77,6 +77,7 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
       return 'Sve Nekretnine';
     }
     if (pathname.includes('buyers')) return 'Kupci';
+    if (pathname.includes('price-lists')) return 'Cenovnici';
     if (pathname.includes('users')) return 'Korisnici';
     if (pathname.includes('api-keys')) return 'API Ključevi';
     return '';
@@ -148,6 +149,13 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
             className={`nav-item ${pathname.includes('buyers') ? 'active' : ''}`}
             onClick={() => setSidebarOpen(false)}>
             <span>👤</span> Kupci
+          </Link>
+
+          {/* Cenovnici */}
+          <Link href="/dashboard/price-lists"
+            className={`nav-item ${pathname.includes('price-lists') ? 'active' : ''}`}
+            onClick={() => setSidebarOpen(false)}>
+            <span>💰</span> Cenovnici
           </Link>
 
           {/* Admin */}

@@ -15,6 +15,7 @@ interface Project { id:string; name:string; location:string; description:string;
 const CATEGORY_LABELS: Record<string, string> = {
   'Novogradnja': 'Novogradnja',
   'Sekundarni Stanovi': 'Sekundarni Stanovi',
+  'Kuće': 'Kuće',
   'Lokali': 'Lokali',
   'Rente': 'Rente',
 };
@@ -140,6 +141,22 @@ function PropertiesPageInner() {
   const togglePublish = async (id:string) => {
     const res = await fetch(`/api/properties/${id}/publish`, {method:'POST'});
     if (res.ok) { const d = await res.json(); showToast(d.message); load(); }
+    else { const d = await res.json(); showToast(d.error || 'Greška', 'error'); }
+  };
+
+  const STATUS_CYCLE = ['Aktivna', 'U pregovoru', 'Prodato'];
+
+  const toggleStatus = async (id:string) => {
+    // Optimistic update: immediately update the status in the UI
+    setProperties(prev => prev.map(p => {
+      if (p.id !== id) return p;
+      const currentIdx = STATUS_CYCLE.indexOf(p.status);
+      const newStatus = STATUS_CYCLE[(currentIdx + 1) % STATUS_CYCLE.length];
+      return {...p, status: newStatus};
+    }));
+    const res = await fetch(`/api/properties/${id}/status`, {method:'POST'});
+    if (res.ok) { const d = await res.json(); showToast(d.message); }
+    else { load(); } // Revert on error by reloading
   };
 
   const toggleFeatured = async (id:string) => {
@@ -369,7 +386,7 @@ function PropertiesPageInner() {
                   <td style={{color:'var(--gold)',fontWeight:600}}>{formatPrice(p.price)}</td>
                   {!category && <td><span className="badge badge-new">{p.type}</span></td>}
                   <td>{p.area}m²</td>
-                  <td><span className={`badge ${p.status==='Aktivna'?'badge-active':p.status==='Prodato'?'badge-sold':'badge-negotiation'}`}>{p.status}</span></td>
+                  <td><button onClick={()=>toggleStatus(p.id)} title="Klikni za promenu statusa" style={{cursor:'pointer',border:'none',background:'transparent',padding:0}}><span className={`badge ${p.status==='Aktivna'?'badge-active':p.status==='Prodato'?'badge-sold':'badge-negotiation'}`} style={{cursor:'pointer'}}>{p.status}</span></button></td>
                   <td><span style={{fontSize:'0.78rem',fontWeight:600,padding:'3px 8px',borderRadius:6,
                     background: p.contract_signed ? 'rgba(76,175,80,0.12)' : 'rgba(255,152,0,0.1)',
                     color: p.contract_signed ? '#66bb6a' : '#ffb74d'

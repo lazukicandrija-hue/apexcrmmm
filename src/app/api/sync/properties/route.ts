@@ -12,7 +12,7 @@ export async function GET() {
     SELECT p.id, p.title, p.description, p.location, p.price, p.type, p.area, p.rooms,
            p.images, p.created_at, p.floor, p.condition, p.parking, p.terrace, p.heating, p.featured_order
     FROM properties p
-    WHERE p.published = 1 AND p.status = 'Aktivna'
+    WHERE p.published = 1 AND p.status = 'Aktivna' AND p.type != 'Novogradnja'
     ORDER BY 
       CASE WHEN p.featured_order IS NOT NULL THEN 0 ELSE 1 END ASC,
       p.featured_order ASC,

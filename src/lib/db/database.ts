@@ -154,6 +154,32 @@ function initializeSchema(database: Database.Database) {
     );
   `);
 
+  // Price Lists: Investors & their unit price lists (Cenovnici)
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS price_list_investors (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      contact_person TEXT DEFAULT '',
+      phone TEXT DEFAULT '',
+      email TEXT DEFAULT '',
+      notes TEXT DEFAULT '',
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS price_list_units (
+      id TEXT PRIMARY KEY,
+      investor_id TEXT NOT NULL REFERENCES price_list_investors(id) ON DELETE CASCADE,
+      unit_name TEXT NOT NULL,
+      floor TEXT DEFAULT '',
+      area REAL DEFAULT 0,
+      price_per_m2 REAL DEFAULT 0,
+      total_price REAL DEFAULT 0,
+      availability TEXT DEFAULT 'Dostupan',
+      notes TEXT DEFAULT '',
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+  `);
+
   // Migrate: add new property fields (safe to run multiple times)
   const addColumnSafe = (table: string, col: string, type: string) => {
     try { database.exec(`ALTER TABLE ${table} ADD COLUMN ${col} ${type}`); } catch { /* column already exists */ }
@@ -180,6 +206,7 @@ function initializeSchema(database: Database.Database) {
   addColumnSafe('properties', 'street', 'TEXT');            // Ulica
   addColumnSafe('properties', 'building_number', 'TEXT');   // Broj zgrade/kuće
   addColumnSafe('properties', 'apartment_number', 'TEXT');  // Broj stana
+  addColumnSafe('properties', 'website_description', 'TEXT'); // Opis za sajt
 
   // Backfill: assign codes to existing properties that don't have one
   backfillPropertyCodes(database);
@@ -217,6 +244,7 @@ const TYPE_PREFIX: Record<string, string> = {
   'Sekundarni Stanovi': 's',
   'Lokali': 'l',
   'Rente': 'r',
+  'Kuće': 'k',
 };
 
 export function generatePropertyCode(database: Database.Database, type: string): string {
@@ -260,5 +288,12 @@ function migratePropertyTypes(database: Database.Database) {
   // Move standalone Novogradnja (no project) -> Sekundarni Stanovi
   database.prepare(`UPDATE properties SET type = 'Sekundarni Stanovi' WHERE type = 'Novogradnja' AND (project_id IS NULL OR project_id = '')`).run();
   database.pragma('ignore_check_constraints = OFF');
+
+  // The original CHECK constraint on 'type' column only allowed
+  // ('Novogradnja','Sekundarni Stanovi','Rente','Lokali') but the UI also
+  // supports 'Kuće'. SQLite doesn't allow ALTER CHECK, so we permanently
+  // disable check constraints for this table. The application layer
+  // validates the type values via the UI dropdowns.
+  database.pragma('ignore_check_constraints = ON');
 }
 
