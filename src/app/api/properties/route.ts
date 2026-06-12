@@ -95,7 +95,7 @@ export async function POST(request: Request) {
     `).run(
       id, code, body.title, body.description || '', body.location, price, body.type,
       area, rooms, body.status || 'Aktivna',
-      body.owner_id || db.prepare('SELECT id FROM owners LIMIT 1').get()?.id || 'system', JSON.stringify(body.images || []), body.published ? 1 : 0,
+      body.owner_id || (db.prepare('SELECT id FROM owners LIMIT 1').get() as any)?.id || 'system', JSON.stringify(body.images || []), body.published ? 1 : 0,
       body.floor || null, body.condition || null, body.parking || null,
       body.terrace || null, body.heating || null,
       body.cadastral_notes || null, body.contract_signed ? 1 : 0,
