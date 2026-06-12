@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, useCallback, Suspense } from 'react';
+import { useEffect, useState, useCallback, Suspense, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
@@ -7,7 +7,9 @@ interface Property {
   id:string; code:string; title:string; location:string; price:number; type:string; area:number;
   rooms:number; status:string; published:number; owner_first_name:string; owner_last_name:string;
   owner_phone:string; created_at:string; contract_signed:number; project_id:string|null;
-  featured_order:number|null; floor:string; images:string;
+  featured_order:number|null; floor:string; images:string; description:string;
+  condition:string; parking:string; terrace:string; heating:string;
+  street:string; building_number:string; apartment_number:string;
 }
 
 // Helper to extract unit name from title like "Lamela A | 1. sprat | Stan A01 (Garsonjera, 26.95m2)"
@@ -74,6 +76,25 @@ function PropertiesPageInner() {
     street:'',building_number:'',apartment_number:'',project_id:''
   });
   const [projectForm, setProjectForm] = useState({name:'',location:'',description:'',developer:'',total_units:''});
+
+  // ── EDIT STATES ──
+  const [showEditUnitModal, setShowEditUnitModal] = useState(false);
+  const [editingUnit, setEditingUnit] = useState<Property|null>(null);
+  const [editUnitForm, setEditUnitForm] = useState({title:'',area:'',floor:'',price:'',status:'Aktivna',description:''});
+  const [editUnitSubmitting, setEditUnitSubmitting] = useState(false);
+  const [editUnitImages, setEditUnitImages] = useState<string[]>([]);
+  const [uploadingImages, setUploadingImages] = useState(false);
+  const editImageInputRef = useRef<HTMLInputElement>(null);
+
+  const [showEditProjectModal, setShowEditProjectModal] = useState(false);
+  const [editingProject, setEditingProject] = useState<Project|null>(null);
+  const [editProjectForm, setEditProjectForm] = useState({name:'',location:'',description:'',developer:'',total_units:''});
+  const [editProjectSubmitting, setEditProjectSubmitting] = useState(false);
+
+  const [showAddUnitModal, setShowAddUnitModal] = useState(false);
+  const [addUnitProjectId, setAddUnitProjectId] = useState('');
+  const [addUnitForm, setAddUnitForm] = useState({title:'',area:'',floor:'',price:'',status:'Aktivna',description:''});
+  const [addUnitSubmitting, setAddUnitSubmitting] = useState(false);
 
   // Update default form type when category changes
   useEffect(() => {
@@ -230,6 +251,189 @@ function PropertiesPageInner() {
     showToast('Projekat obrisan'); load();
   };
 
+  // ── EDIT PROJECT ──
+  const openEditProject = (proj: Project) => {
+    setEditingProject(proj);
+    setEditProjectForm({
+      name: proj.name || '',
+      location: proj.location || '',
+      description: proj.description || '',
+      developer: proj.developer || '',
+      total_units: proj.total_units ? String(proj.total_units) : '',
+    });
+    setShowEditProjectModal(true);
+  };
+
+  const handleEditProjectSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingProject || editProjectSubmitting) return;
+    setEditProjectSubmitting(true);
+    try {
+      const res = await fetch(`/api/projects/${editingProject.id}`, {
+        method: 'PUT', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({
+          name: editProjectForm.name,
+          location: editProjectForm.location,
+          description: editProjectForm.description,
+          developer: editProjectForm.developer,
+          total_units: editProjectForm.total_units ? Number(editProjectForm.total_units) : null,
+        })
+      });
+      if (res.ok) {
+        showToast('Projekat ažuriran!');
+        setShowEditProjectModal(false);
+        setEditingProject(null);
+        load();
+      } else {
+        const d = await res.json();
+        showToast(d.error || 'Greška pri ažuriranju', 'error');
+      }
+    } catch {
+      showToast('Greška pri komunikaciji sa serverom', 'error');
+    }
+    setEditProjectSubmitting(false);
+  };
+
+  // ── EDIT UNIT ──
+  const openEditUnit = async (prop: Property) => {
+    setEditingUnit(prop);
+    setEditUnitForm({
+      title: prop.title || '',
+      area: prop.area ? String(prop.area) : '',
+      floor: prop.floor || '',
+      price: prop.price ? String(prop.price) : '',
+      status: prop.status || 'Aktivna',
+      description: prop.description || '',
+    });
+    setEditUnitImages(prop.images ? JSON.parse(prop.images || '[]') : []);
+    setShowEditUnitModal(true);
+  };
+
+  const handleEditUnitSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingUnit || editUnitSubmitting) return;
+    if (!editUnitForm.title.trim()) { showToast('Unesite naslov', 'error'); return; }
+    setEditUnitSubmitting(true);
+    try {
+      // Fetch the full property to get all fields for the PUT
+      const fullRes = await fetch(`/api/properties/${editingUnit.id}`);
+      const fullData = await fullRes.json();
+      const full = fullData.property;
+      const res = await fetch(`/api/properties/${editingUnit.id}`, {
+        method: 'PUT', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({
+          ...full,
+          title: editUnitForm.title,
+          area: editUnitForm.area ? Number(editUnitForm.area) : null,
+          floor: editUnitForm.floor || null,
+          price: editUnitForm.price ? Number(editUnitForm.price) : null,
+          status: editUnitForm.status,
+          description: editUnitForm.description || '',
+          images: editUnitImages,
+        })
+      });
+      if (res.ok) {
+        showToast('Stan ažuriran!');
+        setShowEditUnitModal(false);
+        setEditingUnit(null);
+        load();
+      } else {
+        const d = await res.json();
+        showToast(d.error || 'Greška pri ažuriranju', 'error');
+      }
+    } catch {
+      showToast('Greška pri komunikaciji sa serverom', 'error');
+    }
+    setEditUnitSubmitting(false);
+  };
+
+  const handleEditUnitImageUpload = async (files: FileList | null) => {
+    if (!files || files.length === 0 || !editingUnit) return;
+    setUploadingImages(true);
+    try {
+      const formData = new FormData();
+      for (let i = 0; i < files.length; i++) {
+        formData.append('images', files[i]);
+      }
+      const res = await fetch(`/api/properties/${editingUnit.id}/images`, {
+        method: 'POST', body: formData,
+      });
+      if (res.ok) {
+        const d = await res.json();
+        setEditUnitImages(d.images || []);
+        showToast(d.message || 'Slike uploadovane');
+      } else {
+        showToast('Greška pri uploadu slika', 'error');
+      }
+    } catch {
+      showToast('Greška pri uploadu', 'error');
+    }
+    setUploadingImages(false);
+  };
+
+  const handleEditUnitImageDelete = async (imgPath: string) => {
+    if (!editingUnit) return;
+    try {
+      const res = await fetch(`/api/properties/${editingUnit.id}/images`, {
+        method: 'DELETE', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ imagePath: imgPath }),
+      });
+      if (res.ok) {
+        const d = await res.json();
+        setEditUnitImages(d.images || []);
+        showToast('Slika obrisana');
+      }
+    } catch {
+      showToast('Greška pri brisanju slike', 'error');
+    }
+  };
+
+  // ── ADD UNIT TO PROJECT ──
+  const openAddUnit = (projectId: string) => {
+    setAddUnitProjectId(projectId);
+    setAddUnitForm({title:'', area:'', floor:'', price:'', status:'Aktivna', description:''});
+    setShowAddUnitModal(true);
+  };
+
+  const handleAddUnitSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (addUnitSubmitting) return;
+    if (!addUnitForm.title.trim()) { showToast('Unesite naslov stana', 'error'); return; }
+    setAddUnitSubmitting(true);
+    try {
+      // Find the project to use its location
+      const proj = projects.find(p => p.id === addUnitProjectId);
+      const res = await fetch('/api/properties', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({
+          title: addUnitForm.title,
+          description: addUnitForm.description || '',
+          location: proj?.location || '',
+          price: addUnitForm.price ? Number(addUnitForm.price) : null,
+          type: 'Novogradnja',
+          area: addUnitForm.area ? Number(addUnitForm.area) : null,
+          rooms: null,
+          status: addUnitForm.status || 'Aktivna',
+          owner_id: null,
+          images: [],
+          project_id: addUnitProjectId,
+          floor: addUnitForm.floor || null,
+        })
+      });
+      if (res.ok) {
+        showToast('Stan dodat u projekat!');
+        setShowAddUnitModal(false);
+        load();
+      } else {
+        const d = await res.json();
+        showToast(d.error || 'Greška pri dodavanju', 'error');
+      }
+    } catch {
+      showToast('Greška pri komunikaciji sa serverom', 'error');
+    }
+    setAddUnitSubmitting(false);
+  };
+
   const pageTitle = CATEGORY_LABELS[category] || 'Sve Nekretnine';
   const isRente = category === 'Rente';
   const isNovogradnja = category === 'Novogradnja';
@@ -360,12 +564,13 @@ function PropertiesPageInner() {
                         {projUnitsRaw.length} {projUnitsRaw.length === 1 ? 'stan' : 'stanova'}
                         {proj.sold_count > 0 && <span style={{color:'#66bb6a'}}> · {proj.sold_count} prodato</span>}
                       </span>
+                      <button className="btn-outline btn-sm" onClick={e=>{e.stopPropagation();openEditProject(proj)}} style={{padding:'4px 10px',fontSize:'0.72rem',borderColor:'rgba(212,175,55,0.3)'}}>✏️ Izmeni</button>
                       <button className="btn-danger btn-sm" onClick={e=>{e.stopPropagation();handleDeleteProject(proj.id)}} style={{padding:'4px 8px',fontSize:'0.72rem'}}>✕</button>
                     </div>
                   </div>
                   {isExpanded && (
                     <div style={{borderTop:'1px solid rgba(212,175,55,0.15)'}}>
-                      {/* Filter bar */}
+                      {/* Filter bar + Add Unit */}
                       <div className="ng-filter-bar">
                         <select className="ng-filter-select" value={ngFilterLamela} onChange={e=>setNgFilterLamela(e.target.value)}>
                           <option value="">Sve lamele</option>
@@ -389,6 +594,7 @@ function PropertiesPageInner() {
                           <button className="ng-filter-reset" onClick={()=>{setNgFilterLamela('');setNgFilterFloor('');setNgFilterStruktura('');setNgFilterStatus('');}}>✕ Resetuj</button>
                         )}
                         <span className="ng-filter-count">{projUnits.length} / {projUnitsRaw.length}</span>
+                        <button className="btn-gold btn-sm" onClick={()=>openAddUnit(proj.id)} style={{marginLeft:'auto',padding:'5px 14px',fontSize:'0.78rem'}}>+ Dodaj Stan</button>
                       </div>
                       {/* Website-style table */}
                       <div className="table-overflow">
@@ -427,7 +633,12 @@ function PropertiesPageInner() {
                                     ) : '—'}
                                   </td>
                                   <td><button className={`publish-toggle ${p.published?'published':'unpublished'}`} onClick={()=>togglePublish(p.id)}>{p.published?'✓':'○'}</button></td>
-                                  <td><button className="btn-danger btn-sm" onClick={()=>handleDelete(p.id)} style={{padding:'4px 8px',fontSize:'0.72rem'}}>🗑</button></td>
+                                  <td>
+                                    <div style={{display:'flex',gap:4}}>
+                                      <button className="btn-outline btn-sm" onClick={()=>openEditUnit(p)} style={{padding:'4px 8px',fontSize:'0.72rem',borderColor:'rgba(212,175,55,0.3)'}}>✏️</button>
+                                      <button className="btn-danger btn-sm" onClick={()=>handleDelete(p.id)} style={{padding:'4px 8px',fontSize:'0.72rem'}}>🗑</button>
+                                    </div>
+                                  </td>
                                 </tr>
                               );
                             })}
@@ -478,7 +689,12 @@ function PropertiesPageInner() {
                   <td style={{fontSize:'0.85rem'}}>{p.owner_first_name} {p.owner_last_name}<br/><span style={{color:'var(--gray-300)',fontSize:'0.75rem'}}>{p.owner_phone}</span></td>
                   <td><button className={`publish-toggle ${p.published?'published':'unpublished'}`} onClick={()=>togglePublish(p.id)}>{p.published?'✓ Objavljeno':'Objavi'}</button></td>
                   <td><button onClick={()=>toggleFeatured(p.id)} title={p.featured_order ? `Istaknuto #${p.featured_order}` : 'Istakni na sajtu'} style={{background:p.featured_order?'rgba(212,175,55,0.15)':'transparent',border:`1px solid ${p.featured_order?'rgba(212,175,55,0.4)':'rgba(255,255,255,0.1)'}`,borderRadius:6,padding:'4px 8px',cursor:'pointer',fontSize:'0.85rem',transition:'all 0.2s'}}>{p.featured_order ? '⭐' : '☆'}</button></td>
-                  <td><button className="btn-danger btn-sm" onClick={()=>handleDelete(p.id)}>🗑</button></td>
+                  <td>
+                    <div style={{display:'flex',gap:4}}>
+                      <button className="btn-outline btn-sm" onClick={()=>openEditUnit(p)} style={{padding:'4px 8px',fontSize:'0.72rem',borderColor:'rgba(212,175,55,0.3)'}}>✏️</button>
+                      <button className="btn-danger btn-sm" onClick={()=>handleDelete(p.id)}>🗑</button>
+                    </div>
+                  </td>
                 </tr>
               ))}
               {standaloneProperties.length===0 && <tr><td colSpan={category ? 10 : 11} style={{textAlign:'center',padding:40,color:'var(--gray-300)'}}>Nema nekretnina u kategoriji {pageTitle}</td></tr>}
@@ -488,7 +704,7 @@ function PropertiesPageInner() {
         )}
         {/* Novogradnja empty state when no projects */}
         {isNovogradnja && projects.length === 0 && (
-          <div style={{textAlign:'center',padding:40,color:'var(--gray-300)',fontSize:'0.9rem'}}>Nema projekata. Kliknite "🏗️ + Projekat" da dodate prvi projekat.</div>
+          <div style={{textAlign:'center',padding:40,color:'var(--gray-300)',fontSize:'0.9rem'}}>Nema projekata. Kliknite &quot;🏗️ + Projekat&quot; da dodate prvi projekat.</div>
         )}
       </div>
 
@@ -655,6 +871,202 @@ function PropertiesPageInner() {
               <div className="modal-footer">
                 <button type="button" className="btn-outline" onClick={()=>setShowProjectModal(false)}>Otkaži</button>
                 <button type="submit" className="btn-gold">Kreiraj Projekat</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── EDIT PROJECT MODAL ── */}
+      {showEditProjectModal && editingProject && (
+        <div className="modal-overlay" onClick={()=>setShowEditProjectModal(false)}>
+          <div className="modal" onClick={e=>e.stopPropagation()} style={{maxWidth:500}}>
+            <div className="modal-header">
+              <div className="modal-title">✏️ Izmeni Projekat</div>
+              <button className="modal-close" onClick={()=>setShowEditProjectModal(false)}>×</button>
+            </div>
+            <form onSubmit={handleEditProjectSubmit}>
+              <div className="modal-body">
+                <div className="form-group">
+                  <label>Naziv Projekta *</label>
+                  <input className="form-input" required value={editProjectForm.name} onChange={e=>setEditProjectForm({...editProjectForm,name:e.target.value})} />
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Lokacija *</label>
+                    <select className="form-select" required value={editProjectForm.location} onChange={e=>setEditProjectForm({...editProjectForm,location:e.target.value})}>
+                      <option value="">Izaberite</option>
+                      {NOVI_SAD_LOKACIJE.map(l=><option key={l}>{l}</option>)}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>Investitor</label>
+                    <input className="form-input" value={editProjectForm.developer} onChange={e=>setEditProjectForm({...editProjectForm,developer:e.target.value})} />
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label>Ukupan Broj Stanova</label>
+                  <input className="form-input" type="number" value={editProjectForm.total_units} onChange={e=>setEditProjectForm({...editProjectForm,total_units:e.target.value})} />
+                </div>
+                <div className="form-group">
+                  <label>Opis</label>
+                  <textarea className="form-textarea" value={editProjectForm.description} onChange={e=>setEditProjectForm({...editProjectForm,description:e.target.value})} />
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn-outline" onClick={()=>setShowEditProjectModal(false)}>Otkaži</button>
+                <button type="submit" className="btn-gold" disabled={editProjectSubmitting}>
+                  {editProjectSubmitting ? '⏳ Čuvanje...' : '💾 Sačuvaj Izmene'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── EDIT UNIT MODAL ── */}
+      {showEditUnitModal && editingUnit && (
+        <div className="modal-overlay" onClick={()=>setShowEditUnitModal(false)}>
+          <div className="modal" onClick={e=>e.stopPropagation()} style={{maxWidth:600}}>
+            <div className="modal-header">
+              <div className="modal-title">✏️ Izmeni Stan</div>
+              <button className="modal-close" onClick={()=>setShowEditUnitModal(false)}>×</button>
+            </div>
+            <form onSubmit={handleEditUnitSubmit}>
+              <div className="modal-body">
+                <div className="form-group">
+                  <label>Naslov / Naziv *</label>
+                  <input className="form-input" value={editUnitForm.title} onChange={e=>setEditUnitForm({...editUnitForm,title:e.target.value})} />
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Površina (m²)</label>
+                    <input className="form-input" type="number" step="0.01" value={editUnitForm.area} onChange={e=>setEditUnitForm({...editUnitForm,area:e.target.value})} />
+                  </div>
+                  <div className="form-group">
+                    <label>Sprat</label>
+                    <input className="form-input" value={editUnitForm.floor} onChange={e=>setEditUnitForm({...editUnitForm,floor:e.target.value})} placeholder="Npr. 3. sprat" />
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Cena (€)</label>
+                    <input className="form-input" type="number" value={editUnitForm.price} onChange={e=>setEditUnitForm({...editUnitForm,price:e.target.value})} />
+                  </div>
+                  <div className="form-group">
+                    <label>Status</label>
+                    <select className="form-select" value={editUnitForm.status} onChange={e=>setEditUnitForm({...editUnitForm,status:e.target.value})}>
+                      <option value="Aktivna">Dostupan</option>
+                      <option value="U pregovoru">Rezervisan</option>
+                      <option value="Prodato">Prodato</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label>Opis</label>
+                  <textarea className="form-textarea" value={editUnitForm.description} onChange={e=>setEditUnitForm({...editUnitForm,description:e.target.value})} placeholder="Dodatni opis stana..." />
+                </div>
+
+                {/* Image Upload Section */}
+                <div style={{borderTop:'1px solid rgba(212,175,55,0.1)',margin:'20px 0',paddingTop:20}}>
+                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
+                    <label style={{color:'var(--gold)',fontFamily:'Cinzel,serif',fontSize:'0.95rem'}}>📷 Skice / Slike</label>
+                    <button type="button" className="btn-outline btn-sm" onClick={()=>editImageInputRef.current?.click()} disabled={uploadingImages}>
+                      {uploadingImages ? '⏳ Upload...' : '+ Dodaj Sliku'}
+                    </button>
+                    <input
+                      ref={editImageInputRef}
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      style={{display:'none'}}
+                      onChange={e=>handleEditUnitImageUpload(e.target.files)}
+                    />
+                  </div>
+                  {editUnitImages.length > 0 ? (
+                    <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(120px,1fr))',gap:10}}>
+                      {editUnitImages.map((img, idx) => (
+                        <div key={idx} style={{position:'relative',borderRadius:8,overflow:'hidden',border:'1px solid rgba(212,175,55,0.15)',background:'rgba(0,0,0,0.3)'}}>
+                          <img
+                            src={img}
+                            alt={`Skica ${idx+1}`}
+                            style={{width:'100%',height:100,objectFit:'cover',display:'block'}}
+                          />
+                          <button
+                            type="button"
+                            onClick={()=>handleEditUnitImageDelete(img)}
+                            style={{position:'absolute',top:4,right:4,background:'rgba(239,68,68,0.85)',border:'none',borderRadius:'50%',width:22,height:22,color:'#fff',cursor:'pointer',fontSize:'0.7rem',display:'flex',alignItems:'center',justifyContent:'center',lineHeight:1}}
+                          >✕</button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div style={{textAlign:'center',padding:20,color:'var(--gray-300)',fontSize:'0.82rem',border:'1px dashed rgba(212,175,55,0.15)',borderRadius:8}}>
+                      Nema uploadovanih slika. Kliknite &quot;+ Dodaj Sliku&quot; da uploadujete skicu stana.
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn-outline" onClick={()=>setShowEditUnitModal(false)}>Otkaži</button>
+                <button type="submit" className="btn-gold" disabled={editUnitSubmitting}>
+                  {editUnitSubmitting ? '⏳ Čuvanje...' : '💾 Sačuvaj Izmene'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── ADD UNIT TO PROJECT MODAL ── */}
+      {showAddUnitModal && (
+        <div className="modal-overlay" onClick={()=>setShowAddUnitModal(false)}>
+          <div className="modal" onClick={e=>e.stopPropagation()} style={{maxWidth:550}}>
+            <div className="modal-header">
+              <div className="modal-title">+ Dodaj Stan u Projekat</div>
+              <button className="modal-close" onClick={()=>setShowAddUnitModal(false)}>×</button>
+            </div>
+            <form onSubmit={handleAddUnitSubmit}>
+              <div className="modal-body">
+                <div className="form-group">
+                  <label>Naslov / Naziv *</label>
+                  <input className="form-input" value={addUnitForm.title} onChange={e=>setAddUnitForm({...addUnitForm,title:e.target.value})} placeholder="Npr. Lamela A | 2. sprat | Stan A05 (Dvosoban, 45.50m2)" />
+                  <div style={{fontSize:'0.72rem',color:'var(--gray-300)',marginTop:4}}>Format: Lamela X | Sprat | Stan XXX (Struktura, Površina)</div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Površina (m²)</label>
+                    <input className="form-input" type="number" step="0.01" value={addUnitForm.area} onChange={e=>setAddUnitForm({...addUnitForm,area:e.target.value})} />
+                  </div>
+                  <div className="form-group">
+                    <label>Sprat</label>
+                    <input className="form-input" value={addUnitForm.floor} onChange={e=>setAddUnitForm({...addUnitForm,floor:e.target.value})} placeholder="Npr. 2. sprat" />
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Cena (€)</label>
+                    <input className="form-input" type="number" value={addUnitForm.price} onChange={e=>setAddUnitForm({...addUnitForm,price:e.target.value})} placeholder="Ostavite prazno za CENA NA UPIT" />
+                  </div>
+                  <div className="form-group">
+                    <label>Status</label>
+                    <select className="form-select" value={addUnitForm.status} onChange={e=>setAddUnitForm({...addUnitForm,status:e.target.value})}>
+                      <option value="Aktivna">Dostupan</option>
+                      <option value="U pregovoru">Rezervisan</option>
+                      <option value="Prodato">Prodato</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label>Opis</label>
+                  <textarea className="form-textarea" value={addUnitForm.description} onChange={e=>setAddUnitForm({...addUnitForm,description:e.target.value})} placeholder="Dodatni opis stana..." />
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn-outline" onClick={()=>setShowAddUnitModal(false)}>Otkaži</button>
+                <button type="submit" className="btn-gold" disabled={addUnitSubmitting}>
+                  {addUnitSubmitting ? '⏳ Dodavanje...' : '+ Dodaj Stan'}
+                </button>
               </div>
             </form>
           </div>
