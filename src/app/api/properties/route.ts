@@ -82,7 +82,7 @@ export async function POST(request: Request) {
     const db = getDb();
     const id = uuidv4();
 
-    const price = body.price != null ? Number(body.price) : null;
+    const price = body.price != null ? Number(body.price) : 0;
     const area = body.area != null && body.area !== '' ? Number(body.area) : null;
     const rooms = body.rooms != null && body.rooms !== '' ? Number(body.rooms) : null;
 
@@ -95,7 +95,7 @@ export async function POST(request: Request) {
     `).run(
       id, code, body.title, body.description || '', body.location, price, body.type,
       area, rooms, body.status || 'Aktivna',
-      body.owner_id, JSON.stringify(body.images || []), body.published ? 1 : 0,
+      body.owner_id || db.prepare('SELECT id FROM owners LIMIT 1').get()?.id || 'system', JSON.stringify(body.images || []), body.published ? 1 : 0,
       body.floor || null, body.condition || null, body.parking || null,
       body.terrace || null, body.heating || null,
       body.cadastral_notes || null, body.contract_signed ? 1 : 0,
