@@ -870,6 +870,193 @@ a:hover { color: var(--gold-light); }
   z-index: 99;
 }
 
+/* ===== NOVOGRADNJA TABLE (Website-style) ===== */
+.ng-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px;
+  background: rgba(212,175,55,0.04);
+  border-bottom: 1px solid rgba(212,175,55,0.1);
+  flex-wrap: wrap;
+}
+
+.ng-filter-select {
+  padding: 6px 28px 6px 10px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(212,175,55,0.18);
+  border-radius: 6px;
+  color: var(--white);
+  font-size: 0.8rem;
+  font-family: 'Montserrat', sans-serif;
+  cursor: pointer;
+  appearance: none;
+  outline: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' fill='%23D4AF37' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  transition: border-color 0.2s;
+}
+
+.ng-filter-select:focus { border-color: var(--gold); }
+.ng-filter-select option { background: var(--gray-800); color: var(--white); }
+
+.ng-filter-reset {
+  padding: 5px 12px;
+  background: rgba(255,68,68,0.1);
+  border: 1px solid rgba(255,68,68,0.25);
+  border-radius: 6px;
+  color: var(--red);
+  font-size: 0.78rem;
+  cursor: pointer;
+  font-family: 'Montserrat', sans-serif;
+  transition: all 0.2s;
+}
+
+.ng-filter-reset:hover { background: rgba(255,68,68,0.2); }
+
+.ng-filter-count {
+  margin-left: auto;
+  font-size: 0.78rem;
+  color: var(--gray-300);
+  font-weight: 600;
+}
+
+.ng-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.ng-table thead th {
+  text-align: left;
+  padding: 14px 18px;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--gold);
+  font-weight: 700;
+  font-family: 'Cinzel', serif;
+  border-bottom: 1px solid rgba(212,175,55,0.2);
+  white-space: nowrap;
+  background: rgba(212,175,55,0.04);
+}
+
+.ng-table tbody td {
+  padding: 12px 18px;
+  font-size: 0.88rem;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  vertical-align: middle;
+  color: var(--gray-200);
+}
+
+.ng-table tbody tr {
+  transition: all 0.15s ease;
+}
+
+.ng-table tbody tr:hover {
+  background: rgba(212,175,55,0.05);
+}
+
+.ng-table tbody tr.ng-row-sold {
+  opacity: 0.6;
+}
+
+.ng-cell-name a {
+  color: var(--white);
+  font-weight: 500;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.ng-cell-name a:hover { color: var(--gold); }
+
+.ng-cell-floor {
+  color: var(--gray-300);
+  font-size: 0.85rem;
+}
+
+.ng-cell-area {
+  color: var(--gray-200);
+  font-size: 0.85rem;
+}
+
+.ng-cell-struktura {
+  color: var(--gray-200);
+  font-size: 0.85rem;
+}
+
+.ng-cell-price {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--white);
+  letter-spacing: 0.3px;
+}
+
+.ng-cell-price strong {
+  font-weight: 700;
+  font-size: 0.82rem;
+  letter-spacing: 0.5px;
+}
+
+.ng-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+.ng-status-available {
+  color: var(--green);
+}
+
+.ng-status-available::before {
+  content: '●';
+  font-size: 0.6rem;
+}
+
+.ng-status-sold {
+  color: var(--red);
+}
+
+.ng-status-negotiation {
+  color: var(--orange);
+}
+
+.ng-status-negotiation::before {
+  content: '●';
+  font-size: 0.6rem;
+}
+
+.ng-btn-plan {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 14px;
+  background: rgba(212,175,55,0.1);
+  border: 1px solid rgba(212,175,55,0.25);
+  border-radius: 6px;
+  color: var(--gold) !important;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-decoration: none !important;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.ng-btn-plan:hover {
+  background: rgba(212,175,55,0.2);
+  border-color: var(--gold);
+  transform: translateY(-1px);
+}
+
+.ng-cell-skica {
+  white-space: nowrap;
+}
+
 /* ===== RESPONSIVE ===== */
 @media (max-width: 768px) {
   .sidebar {

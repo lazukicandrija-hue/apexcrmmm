@@ -7,7 +7,22 @@ interface Property {
   id:string; code:string; title:string; location:string; price:number; type:string; area:number;
   rooms:number; status:string; published:number; owner_first_name:string; owner_last_name:string;
   owner_phone:string; created_at:string; contract_signed:number; project_id:string|null;
-  featured_order:number|null;
+  featured_order:number|null; floor:string; images:string;
+}
+
+// Helper to extract unit name from title like "Lamela A | 1. sprat | Stan A01 (Garsonjera, 26.95m2)"
+function extractUnitName(title:string):string {
+  const m = title.match(/Stan ([A-C]\d+)/); if (m) return `Stan br.${m[1]}`;
+  const l = title.match(/Lokal (\d+)/); if (l) return `Lokal ${parseInt(l[1])}`;
+  return title;
+}
+function extractStruktura(title:string):string {
+  const m = title.match(/\(([^,)]+)/); if (m) return m[1];
+  if (title.match(/Lokal/)) return 'Lokal';
+  return '—';
+}
+function extractLamela(title:string):string {
+  const m = title.match(/Lamela ([A-C])/); return m ? m[1] : '?';
 }
 interface Owner { id:string; first_name:string; last_name:string; phone:string; email:string; }
 interface Project { id:string; name:string; location:string; description:string; developer:string; total_units:number; unit_count:number; sold_count:number; }
@@ -45,6 +60,11 @@ function PropertiesPageInner() {
   const [showProjectModal, setShowProjectModal] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [advFilters, setAdvFilters] = useState({minPrice:'',maxPrice:'',minRooms:'',maxRooms:'',minArea:'',maxArea:'',floor:'',parking:'',heating:'',terrace:'',owner:'',location:''});
+  // Novogradnja-specific filters
+  const [ngFilterFloor, setNgFilterFloor] = useState('');
+  const [ngFilterStruktura, setNgFilterStruktura] = useState('');
+  const [ngFilterLamela, setNgFilterLamela] = useState('');
+  const [ngFilterStatus, setNgFilterStatus] = useState('');
   const [toast, setToast] = useState<{msg:string;type:string}|null>(null);
   const [form, setForm] = useState({
     title:'',description:'',location:'',price:'',type:category || 'Sekundarni Stanovi',area:'',rooms:'',
@@ -287,14 +307,44 @@ function PropertiesPageInner() {
             )}
           </div>
         )}
-        {/* Novogradnja: Project Groups */}
+        {/* Novogradnja: Project Groups - Website-style table */}
         {isNovogradnja && projects.length > 0 && (
           <div style={{marginBottom:20}}>
             {projects.map(proj => {
-              const projUnits = projectProperties.filter(p => p.project_id === proj.id);
+              const projUnitsRaw = projectProperties.filter(p => p.project_id === proj.id);
               const isExpanded = expandedProjects.has(proj.id);
+              // Collect unique values for filters
+              const allFloors = [...new Set(projUnitsRaw.map(p => p.floor).filter(Boolean))].sort();
+              const allStrukturas = [...new Set(projUnitsRaw.map(p => extractStruktura(p.title)).filter(s => s !== '—'))].sort();
+              const allLamelas = [...new Set(projUnitsRaw.map(p => extractLamela(p.title)).filter(l => l !== '?'))].sort();
+              // Apply novogradnja filters
+              const projUnits = projUnitsRaw.filter(p => {
+                if (ngFilterFloor && p.floor !== ngFilterFloor) return false;
+                if (ngFilterStruktura && extractStruktura(p.title) !== ngFilterStruktura) return false;
+                if (ngFilterLamela && extractLamela(p.title) !== ngFilterLamela) return false;
+                if (ngFilterStatus && p.status !== ngFilterStatus) return false;
+                return true;
+              });
+              // Sort: Lamela A > B > C, then by floor, then by unit number
+              const floorOrder = (f:string) => {
+                if (!f) return 99;
+                if (f.includes('Podrum')) return 0;
+                if (f.includes('Prizemlje')) return 1;
+                const m = f.match(/(\d+)/);
+                return m ? parseInt(m[1]) + 1 : 99;
+              };
+              const unitNum = (t:string) => {
+                const m = t.match(/[A-C](\d+)/); return m ? parseInt(m[1]) : 999;
+              };
+              projUnits.sort((a,b) => {
+                const la = extractLamela(a.title), lb = extractLamela(b.title);
+                if (la !== lb) return la.localeCompare(lb);
+                const fa = floorOrder(a.floor), fb = floorOrder(b.floor);
+                if (fa !== fb) return fa - fb;
+                return unitNum(a.title) - unitNum(b.title);
+              });
               return (
-                <div key={proj.id} style={{marginBottom:12,border:'1px solid rgba(212,175,55,0.15)',borderRadius:12,overflow:'hidden',background:'rgba(212,175,55,0.03)'}}>
+                <div key={proj.id} style={{marginBottom:16,border:'1px solid rgba(212,175,55,0.15)',borderRadius:12,overflow:'hidden',background:'rgba(10,10,10,0.8)'}}>
                   <div onClick={()=>toggleProject(proj.id)} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'14px 18px',cursor:'pointer',transition:'background 0.2s'}}
                     onMouseEnter={e=>(e.currentTarget.style.background='rgba(212,175,55,0.06)')}
                     onMouseLeave={e=>(e.currentTarget.style.background='transparent')}>
@@ -307,33 +357,84 @@ function PropertiesPageInner() {
                     </div>
                     <div style={{display:'flex',alignItems:'center',gap:12}}>
                       <span style={{fontSize:'0.82rem',color:'var(--gray-200)',background:'rgba(212,175,55,0.1)',padding:'3px 10px',borderRadius:20,fontWeight:600}}>
-                        {projUnits.length} {projUnits.length === 1 ? 'stan' : 'stanova'}
+                        {projUnitsRaw.length} {projUnitsRaw.length === 1 ? 'stan' : 'stanova'}
                         {proj.sold_count > 0 && <span style={{color:'#66bb6a'}}> · {proj.sold_count} prodato</span>}
                       </span>
                       <button className="btn-danger btn-sm" onClick={e=>{e.stopPropagation();handleDeleteProject(proj.id)}} style={{padding:'4px 8px',fontSize:'0.72rem'}}>✕</button>
                     </div>
                   </div>
                   {isExpanded && (
-                    <div style={{borderTop:'1px solid rgba(212,175,55,0.1)',padding:'0'}}>
-                      <table className="data-table" style={{marginBottom:0}}>
-                        <thead><tr><th>Naslov</th><th>Lokacija</th><th>Cena</th><th>m²</th><th>Status</th><th>Ugovor</th><th>Sajt</th><th>⭐</th><th>Akcije</th></tr></thead>
-                        <tbody>
-                          {projUnits.map(p=>(
-                            <tr key={p.id}>
-                              <td><Link href={`/dashboard/properties/${p.id}`} style={{color:'#fff',fontWeight:500}}><span style={{color:'var(--gold)',fontWeight:700,fontFamily:'monospace',fontSize:'0.82rem',marginRight:8,background:'rgba(212,175,55,0.1)',padding:'2px 6px',borderRadius:4}}>{p.code}</span>{p.title}</Link></td>
-                              <td style={{color:'var(--gray-300)',fontSize:'0.85rem'}}>{p.location}</td>
-                              <td style={{color:'var(--gold)',fontWeight:600}}>{formatPrice(p.price)}</td>
-                              <td>{p.area}m²</td>
-                              <td><span className={`badge ${p.status==='Aktivna'?'badge-active':p.status==='Prodato'?'badge-sold':'badge-negotiation'}`}>{p.status}</span></td>
-                              <td><span style={{fontSize:'0.78rem',fontWeight:600,padding:'3px 8px',borderRadius:6,background:p.contract_signed?'rgba(76,175,80,0.12)':'rgba(255,152,0,0.1)',color:p.contract_signed?'#66bb6a':'#ffb74d'}}>{p.contract_signed?'✓ Da':'✕ Ne'}</span></td>
-                              <td><button className={`publish-toggle ${p.published?'published':'unpublished'}`} onClick={()=>togglePublish(p.id)}>{p.published?'✓':'Objavi'}</button></td>
-                              <td><button onClick={()=>toggleFeatured(p.id)} title={p.featured_order ? `Istaknuto #${p.featured_order}` : 'Istakni na sajtu'} style={{background:p.featured_order?'rgba(212,175,55,0.15)':'transparent',border:`1px solid ${p.featured_order?'rgba(212,175,55,0.4)':'rgba(255,255,255,0.1)'}`,borderRadius:6,padding:'4px 8px',cursor:'pointer',fontSize:'0.85rem'}}>{p.featured_order ? '⭐' : '☆'}</button></td>
-                              <td><button className="btn-danger btn-sm" onClick={()=>handleDelete(p.id)}>🗑</button></td>
+                    <div style={{borderTop:'1px solid rgba(212,175,55,0.15)'}}>
+                      {/* Filter bar */}
+                      <div className="ng-filter-bar">
+                        <select className="ng-filter-select" value={ngFilterLamela} onChange={e=>setNgFilterLamela(e.target.value)}>
+                          <option value="">Sve lamele</option>
+                          {allLamelas.map(l => <option key={l} value={l}>Lamela {l}</option>)}
+                        </select>
+                        <select className="ng-filter-select" value={ngFilterFloor} onChange={e=>setNgFilterFloor(e.target.value)}>
+                          <option value="">Svi spratovi</option>
+                          {allFloors.map(f => <option key={f} value={f}>{f}</option>)}
+                        </select>
+                        <select className="ng-filter-select" value={ngFilterStruktura} onChange={e=>setNgFilterStruktura(e.target.value)}>
+                          <option value="">Sve strukture</option>
+                          {allStrukturas.map(s => <option key={s} value={s}>{s}</option>)}
+                        </select>
+                        <select className="ng-filter-select" value={ngFilterStatus} onChange={e=>setNgFilterStatus(e.target.value)}>
+                          <option value="">Svi statusi</option>
+                          <option value="Aktivna">Dostupan</option>
+                          <option value="U pregovoru">U pregovoru</option>
+                          <option value="Prodato">Prodato</option>
+                        </select>
+                        {(ngFilterLamela||ngFilterFloor||ngFilterStruktura||ngFilterStatus) && (
+                          <button className="ng-filter-reset" onClick={()=>{setNgFilterLamela('');setNgFilterFloor('');setNgFilterStruktura('');setNgFilterStatus('');}}>✕ Resetuj</button>
+                        )}
+                        <span className="ng-filter-count">{projUnits.length} / {projUnitsRaw.length}</span>
+                      </div>
+                      {/* Website-style table */}
+                      <div className="table-overflow">
+                        <table className="ng-table">
+                          <thead>
+                            <tr>
+                              <th>STAN</th>
+                              <th>SPRAT</th>
+                              <th>POVRŠINA</th>
+                              <th>STRUKTURA</th>
+                              <th>CENA</th>
+                              <th>STATUS</th>
+                              <th>SKICA</th>
+                              <th>SAJT</th>
+                              <th>AKCIJE</th>
                             </tr>
-                          ))}
-                          {projUnits.length===0 && <tr><td colSpan={9} style={{textAlign:'center',padding:20,color:'var(--gray-300)'}}>Nema stanova u projektu</td></tr>}
-                        </tbody>
-                      </table>
+                          </thead>
+                          <tbody>
+                            {projUnits.map(p => {
+                              const unitName = extractUnitName(p.title);
+                              const struktura = extractStruktura(p.title);
+                              const hasImages = p.images && JSON.parse(p.images || '[]').length > 0;
+                              const statusClass = p.status === 'Aktivna' ? 'ng-status-available' : p.status === 'Prodato' ? 'ng-status-sold' : 'ng-status-negotiation';
+                              const statusLabel = p.status === 'Aktivna' ? 'Dostupan' : p.status === 'Prodato' ? 'Prodato' : 'U pregovoru';
+                              return (
+                                <tr key={p.id} className={p.status === 'Prodato' ? 'ng-row-sold' : ''}>
+                                  <td className="ng-cell-name"><Link href={`/dashboard/properties/${p.id}`}>{unitName}</Link></td>
+                                  <td className="ng-cell-floor">{p.floor || '—'}</td>
+                                  <td className="ng-cell-area">{p.area} m²</td>
+                                  <td className="ng-cell-struktura">{struktura}</td>
+                                  <td className="ng-cell-price">{p.price ? formatPrice(p.price) : <strong>CENA NA UPIT</strong>}</td>
+                                  <td><span className={`ng-status ${statusClass}`}>{statusLabel}</span></td>
+                                  <td className="ng-cell-skica">
+                                    {hasImages ? (
+                                      <Link href={`/dashboard/properties/${p.id}`} className="ng-btn-plan">🏠 Plan stana</Link>
+                                    ) : '—'}
+                                  </td>
+                                  <td><button className={`publish-toggle ${p.published?'published':'unpublished'}`} onClick={()=>togglePublish(p.id)}>{p.published?'✓':'○'}</button></td>
+                                  <td><button className="btn-danger btn-sm" onClick={()=>handleDelete(p.id)} style={{padding:'4px 8px',fontSize:'0.72rem'}}>🗑</button></td>
+                                </tr>
+                              );
+                            })}
+                            {projUnits.length===0 && <tr><td colSpan={9} style={{textAlign:'center',padding:30,color:'var(--gray-300)'}}>Nema stanova za izabrane filtere</td></tr>}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
                   )}
                 </div>
