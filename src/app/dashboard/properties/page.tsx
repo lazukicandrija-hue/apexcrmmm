@@ -24,7 +24,12 @@ function extractStruktura(title:string):string {
   return '—';
 }
 function extractLamela(title:string):string {
-  const m = title.match(/Lamela ([A-C])/); return m ? m[1] : '?';
+  const m = title.match(/Lamela ([A-C])/); if (m) return m[1];
+  const s = title.match(/Stan ([A-C])\d/); if (s) return s[1];
+  if (title.match(/Lokal\s+(0?[1-3])\b/)) return 'A';
+  if (title.match(/Lokal\s+(0?[4-5])\b/)) return 'B';
+  if (title.match(/Lokal\s+(0?[6-8])\b/)) return 'C';
+  return '?';
 }
 interface Owner { id:string; first_name:string; last_name:string; phone:string; email:string; }
 interface Project { id:string; name:string; location:string; description:string; developer:string; total_units:number; unit_count:number; sold_count:number; }
