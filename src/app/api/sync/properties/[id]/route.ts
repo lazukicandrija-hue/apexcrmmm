@@ -11,7 +11,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const db = getDb();
   
   const property = db.prepare(`
-    SELECT p.id, p.title, p.description, p.location, p.price, p.type, p.area, p.rooms,
+    SELECT p.id, p.title, p.website_description, p.location, p.price, p.type, p.area, p.rooms,
            p.images, p.created_at, p.floor, p.condition, p.parking, p.terrace, p.heating, p.featured_order
     FROM properties p
     WHERE p.id = ? AND p.published = 1 AND p.status = 'Aktivna'
@@ -24,7 +24,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const formatted = {
     id: property.id,
     title: property.title,
-    description: (property.description as string) || '',
+    description: (property.website_description as string) || '',
     location: property.location,
     price: property.price,
     type: property.type,

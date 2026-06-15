@@ -9,7 +9,7 @@ const CRM_BASE = 'https://crm.apexrealestate.rs';
 export async function GET() {
   const db = getDb();
   const properties = db.prepare(`
-    SELECT p.id, p.title, p.description, p.location, p.price, p.type, p.area, p.rooms,
+    SELECT p.id, p.title, p.website_description, p.location, p.price, p.type, p.area, p.rooms,
            p.images, p.created_at, p.floor, p.condition, p.parking, p.terrace, p.heating, p.featured_order
     FROM properties p
     WHERE p.published = 1 AND p.status = 'Aktivna' AND p.type != 'Novogradnja'
@@ -22,7 +22,7 @@ export async function GET() {
   const formatted = (properties as Record<string, unknown>[]).map(p => ({
     id: p.id,
     title: p.title,
-    description: (p.description as string) || '',
+    description: (p.website_description as string) || '',
     location: p.location,
     price: p.price,
     type: p.type,

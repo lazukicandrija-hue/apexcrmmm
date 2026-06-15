@@ -10,7 +10,7 @@ interface Property {
   featured_order:number|null;
 }
 interface Owner { id:string; first_name:string; last_name:string; phone:string; email:string; }
-interface Project { id:string; name:string; location:string; description:string; developer:string; total_units:number; unit_count:number; sold_count:number; }
+interface Project { id:string; name:string; location:string; description:string; developer:string; total_units:number; unit_count:number; sold_count:number; published:number; }
 
 const CATEGORY_LABELS: Record<string, string> = {
   'Novogradnja': 'Novogradnja',
@@ -227,6 +227,18 @@ function PropertiesPageInner() {
     showToast('Projekat obrisan'); load();
   };
 
+  const toggleProjectPublish = async (pid: string, currentlyPublished: number) => {
+    try {
+      const res = await fetch(`/api/projects/${pid}/publish`, { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      showToast(data.message);
+      load();
+    } catch (e) {
+      showToast((e as Error).message || 'Greška', 'error');
+    }
+  };
+
   const pageTitle = CATEGORY_LABELS[category] || 'Sve Nekretnine';
   const isRente = category === 'Rente';
   const isNovogradnja = category === 'Novogradnja';
@@ -327,6 +339,12 @@ function PropertiesPageInner() {
                         {projUnits.length} {projUnits.length === 1 ? 'stan' : 'stanova'}
                         {proj.sold_count > 0 && <span style={{color:'#66bb6a'}}> · {proj.sold_count} prodato</span>}
                       </span>
+                      {proj.published ? (
+                        <button className="btn-sm" onClick={e=>{e.stopPropagation();toggleProjectPublish(proj.id, proj.published)}} style={{fontSize:'0.72rem',color:'#4CAF50',background:'rgba(76,175,80,0.12)',padding:'4px 10px',borderRadius:6,fontWeight:600,border:'1px solid rgba(76,175,80,0.3)',cursor:'pointer'}}>🌐 Na sajtu ✓</button>
+                      ) : (
+                        <button className="btn-gold btn-sm" onClick={e=>{e.stopPropagation();toggleProjectPublish(proj.id, proj.published)}} style={{padding:'4px 10px',fontSize:'0.72rem'}}>🌐 Objavi na sajt</button>
+                      )}
+                      <Link href={`/dashboard/projects/${proj.id}`} className="btn-outline btn-sm" onClick={e=>e.stopPropagation()} style={{padding:'4px 10px',fontSize:'0.72rem',borderColor:'rgba(212,175,55,0.3)'}}>✏️ Uredi</Link>
                       <button className="btn-danger btn-sm" onClick={e=>{e.stopPropagation();handleDeleteProject(proj.id)}} style={{padding:'4px 8px',fontSize:'0.72rem'}}>✕</button>
                     </div>
                   </div>

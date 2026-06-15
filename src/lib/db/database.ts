@@ -208,6 +208,11 @@ function initializeSchema(database: Database.Database) {
   addColumnSafe('properties', 'apartment_number', 'TEXT');  // Broj stana
   addColumnSafe('properties', 'website_description', 'TEXT'); // Opis za sajt
 
+  // Migrate: add project publishing and website fields
+  addColumnSafe('projects', 'published', 'INTEGER DEFAULT 0');        // 0=draft, 1=published on website
+  addColumnSafe('projects', 'website_description', 'TEXT');           // Opis za sajt (razlicit od internog opisa)
+  addColumnSafe('projects', 'completion_date', 'TEXT');               // Datum zavrsetka (npr. "Mart 2027")
+
   // Backfill: assign codes to existing properties that don't have one
   backfillPropertyCodes(database);
 
@@ -281,19 +286,9 @@ function backfillPropertyCodes(database: Database.Database) {
 }
 
 function migratePropertyTypes(database: Database.Database) {
-  // Bypass old CHECK constraint on existing table during migration
-  database.pragma('ignore_check_constraints = ON');
-  // Rename Starogradnja -> Sekundarni Stanovi
+  // Rename Starogradnja -> Sekundarni Stanovi (safe to run multiple times - no-op if none exist)
   database.prepare(`UPDATE properties SET type = 'Sekundarni Stanovi' WHERE type = 'Starogradnja'`).run();
   // Move standalone Novogradnja (no project) -> Sekundarni Stanovi
   database.prepare(`UPDATE properties SET type = 'Sekundarni Stanovi' WHERE type = 'Novogradnja' AND (project_id IS NULL OR project_id = '')`).run();
-  database.pragma('ignore_check_constraints = OFF');
-
-  // The original CHECK constraint on 'type' column only allowed
-  // ('Novogradnja','Sekundarni Stanovi','Rente','Lokali') but the UI also
-  // supports 'Kuće'. SQLite doesn't allow ALTER CHECK, so we permanently
-  // disable check constraints for this table. The application layer
-  // validates the type values via the UI dropdowns.
-  database.pragma('ignore_check_constraints = ON');
 }
 

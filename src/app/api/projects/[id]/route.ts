@@ -39,7 +39,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     if (!existing) return NextResponse.json({ error: 'Projekat nije pronađen' }, { status: 404 });
 
     db.prepare(`
-      UPDATE projects SET name=?, location=?, description=?, developer=?, total_units=?, images=?
+      UPDATE projects SET name=?, location=?, description=?, developer=?, total_units=?, images=?, website_description=?, completion_date=?
       WHERE id=?
     `).run(
       body.name ?? existing.name,
@@ -48,6 +48,8 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       body.developer ?? existing.developer,
       body.total_units ?? existing.total_units,
       body.images ? JSON.stringify(body.images) : (existing.images as string),
+      body.website_description ?? (existing.website_description as string) ?? '',
+      body.completion_date ?? (existing.completion_date as string) ?? '',
       id
     );
 
