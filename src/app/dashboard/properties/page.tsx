@@ -350,6 +350,9 @@ function PropertiesPageInner() {
                   </div>
                   {isExpanded && (
                     <div style={{borderTop:'1px solid rgba(212,175,55,0.1)',padding:'0'}}>
+                      <div style={{display:'flex',justifyContent:'flex-end',padding:'10px 18px',borderBottom:'1px solid rgba(212,175,55,0.06)'}}>
+                        <button className="btn-gold btn-sm" onClick={e=>{e.stopPropagation();setForm({...form,project_id:proj.id,type:'Novogradnja',location:proj.location,title:`${proj.name} - `});setShowModal(true)}} style={{fontSize:'0.78rem'}}>+ DODAJ STAN</button>
+                      </div>
                       <table className="data-table" style={{marginBottom:0}}>
                         <thead><tr><th>Naslov</th><th>Lokacija</th><th>Cena</th><th>m²</th><th>Status</th><th>Ugovor</th><th>Sajt</th><th>⭐</th><th>Akcije</th></tr></thead>
                         <tbody>
@@ -363,7 +366,7 @@ function PropertiesPageInner() {
                               <td><span style={{fontSize:'0.78rem',fontWeight:600,padding:'3px 8px',borderRadius:6,background:p.contract_signed?'rgba(76,175,80,0.12)':'rgba(255,152,0,0.1)',color:p.contract_signed?'#66bb6a':'#ffb74d'}}>{p.contract_signed?'✓ Da':'✕ Ne'}</span></td>
                               <td><button className={`publish-toggle ${p.published?'published':'unpublished'}`} onClick={()=>togglePublish(p.id)}>{p.published?'✓':'Objavi'}</button></td>
                               <td><button onClick={()=>toggleFeatured(p.id)} title={p.featured_order ? `Istaknuto #${p.featured_order}` : 'Istakni na sajtu'} style={{background:p.featured_order?'rgba(212,175,55,0.15)':'transparent',border:`1px solid ${p.featured_order?'rgba(212,175,55,0.4)':'rgba(255,255,255,0.1)'}`,borderRadius:6,padding:'4px 8px',cursor:'pointer',fontSize:'0.85rem'}}>{p.featured_order ? '⭐' : '☆'}</button></td>
-                              <td><button className="btn-danger btn-sm" onClick={()=>handleDelete(p.id)}>🗑</button></td>
+                              <td style={{display:'flex',gap:4}}><Link href={`/dashboard/properties/${p.id}`} className="btn-outline btn-sm" style={{padding:'4px 8px',fontSize:'0.72rem',borderColor:'rgba(212,175,55,0.3)'}}>✏️</Link><button className="btn-danger btn-sm" onClick={()=>handleDelete(p.id)}>🗑</button></td>
                             </tr>
                           ))}
                           {projUnits.length===0 && <tr><td colSpan={9} style={{textAlign:'center',padding:20,color:'var(--gray-300)'}}>Nema stanova u projektu</td></tr>}

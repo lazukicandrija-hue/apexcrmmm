@@ -13,7 +13,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ slug
 
   // Get all projects and find by slug match
   const projects = db.prepare(`
-    SELECT p.id, p.name, p.location, p.description, p.total_units, p.images
+    SELECT p.id, p.name, p.location, p.description, p.total_units, p.images, p.website_description, p.completion_date
     FROM projects p
     ORDER BY p.created_at DESC
   `).all() as Record<string, unknown>[];
@@ -33,7 +33,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ slug
            p.images, p.status, p.type, p.website_description, p.condition,
            p.parking, p.terrace, p.heating, p.featured_order
     FROM properties p
-    WHERE p.project_id = ? AND p.published = 1 AND p.status = 'Aktivna'
+    WHERE p.project_id = ? AND p.published = 1 AND p.status IN ('Aktivna', 'Prodato')
     ORDER BY p.code ASC
   `).all(project.id as string) as Record<string, unknown>[];
 
@@ -67,6 +67,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ slug
     slug: (project.name as string).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/, ''),
     location: project.location,
     description: (project.description as string) || '',
+    website_description: (project.website_description as string) || '',
+    completion_date: (project.completion_date as string) || null,
     // NOTE: developer/investor info is intentionally NOT exposed
     total_units: project.total_units,
     images: projectImages,
