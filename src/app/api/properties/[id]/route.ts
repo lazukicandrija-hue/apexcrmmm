@@ -13,8 +13,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const db = getDb();
   const property = db.prepare(`
     SELECT p.*, o.first_name as owner_first_name, o.last_name as owner_last_name,
-           o.phone as owner_phone, o.email as owner_email, o.notes as owner_notes
-    FROM properties p LEFT JOIN owners o ON p.owner_id = o.id WHERE p.id = ?
+           o.phone as owner_phone, o.email as owner_email, o.notes as owner_notes,
+           u.full_name as agent_name
+    FROM properties p LEFT JOIN owners o ON p.owner_id = o.id
+    LEFT JOIN users u ON p.agent_id = u.id WHERE p.id = ?
   `).get(id);
 
   if (!property) return NextResponse.json({ error: 'Not found' }, { status: 404 });
@@ -43,7 +45,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       UPDATE properties SET title=?, description=?, notes=?, location=?, price=?, type=?, area=?, rooms=?,
       status=?, owner_id=?, images=?, published=?, floor=?, condition=?, parking=?, terrace=?, heating=?,
       cadastral_notes=?, contract_signed=?, reminder_text=?, website_description=?,
-      street=?, building_number=?, apartment_number=?,
+      street=?, building_number=?, apartment_number=?, agent_id=?,
       updated_at=datetime('now') WHERE id=?
     `).run(
       body.title, body.description || '', body.notes ?? old.notes ?? '', body.location, price, body.type,
@@ -54,6 +56,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       body.cadastral_notes ?? old.cadastral_notes ?? null, body.contract_signed != null ? (body.contract_signed ? 1 : 0) : old.contract_signed,
       body.reminder_text ?? old.reminder_text ?? null, body.website_description ?? old.website_description ?? null,
       body.street ?? old.street ?? null, body.building_number ?? old.building_number ?? null, body.apartment_number ?? old.apartment_number ?? null,
+      body.agent_id ?? old.agent_id ?? null,
       id
     );
 
@@ -81,6 +84,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       { key: 'building_number', label: 'Broj zgrade/kuće' },
       { key: 'apartment_number', label: 'Broj stana' },
       { key: 'website_description', label: 'Opis za sajt' },
+      { key: 'agent_id', label: 'Agent' },
     ];
 
     const insertAudit = db.prepare(

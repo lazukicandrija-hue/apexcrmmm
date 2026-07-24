@@ -16,11 +16,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const newStatus = project.published ? 0 : 1;
   db.prepare('UPDATE projects SET published = ? WHERE id = ?').run(newStatus, id);
 
-  // When publishing a project, also publish all its active units
+  // When publishing a project, also publish ALL its units (active + sold)
   if (newStatus === 1) {
     db.prepare(`
-      UPDATE properties SET published = 1, contract_signed = 1, updated_at = datetime('now')
-      WHERE project_id = ? AND status = 'Aktivna'
+      UPDATE properties SET published = 1, updated_at = datetime('now')
+      WHERE project_id = ?
     `).run(id);
   }
 

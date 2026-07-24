@@ -11,6 +11,7 @@ interface Property {
   floor:string; condition:string; parking:string; terrace:string; heating:string;
   cadastral_notes:string; contract_signed:number; reminder_text:string;
   street:string; building_number:string; apartment_number:string;
+  agent_id:string; agent_name:string;
 }
 interface NoteEntry { id:string; content:string; created_at:string; }
 interface AuditEntry { id:string; field_name:string; old_value:string; new_value:string; user_name:string; changed_at:string; }
@@ -65,6 +66,7 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
   const [reminderText, setReminderText] = useState('');
   const [websiteDesc, setWebsiteDesc] = useState('');
   const [savingWebDesc, setSavingWebDesc] = useState(false);
+  const [agents, setAgents] = useState<{id:string;full_name:string}[]>([]);
 
   const load = () => {
     fetch(`/api/properties/${id}`).then(r=>r.json()).then(d=>{
@@ -81,6 +83,7 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
         fetch(`/api/properties/${id}/audit`).then(r=>r.json()).then(a=>setAuditLog(a.logs||[]));
         fetch(`/api/properties/${id}/matches`).then(r=>r.json()).then(m=>setBuyerMatches(m.matches||[]));
         fetch(`/api/properties/${id}/ads`).then(r=>r.json()).then(a=>setAdListings(a.ads||[]));
+        fetch('/api/agents').then(r=>r.json()).then(d=>setAgents(d.agents||[]));
       }
     });
     fetch('/api/owners').then(r=>r.json()).then(d=>setOwners(d.owners||[]));
@@ -92,7 +95,7 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
 
   const enterEdit = () => {
     if (!property) return;
-    setEditForm({title:property.title,description:property.description||'',location:property.location,price:property.price,type:property.type,area:property.area||0,rooms:property.rooms||0,status:property.status,owner_id:property.owner_id,floor:property.floor||'',condition:property.condition||'',parking:property.parking||'',terrace:property.terrace||'',heating:property.heating||'',street:property.street||'',building_number:property.building_number||'',apartment_number:property.apartment_number||''});
+    setEditForm({title:property.title,description:property.description||'',location:property.location,price:property.price,type:property.type,area:property.area||0,rooms:property.rooms||0,status:property.status,owner_id:property.owner_id,floor:property.floor||'',condition:property.condition||'',parking:property.parking||'',terrace:property.terrace||'',heating:property.heating||'',street:property.street||'',building_number:property.building_number||'',apartment_number:property.apartment_number||'',agent_id:property.agent_id||''});
     setOwnerForm({first_name:property.owner_first_name||'',last_name:property.owner_last_name||'',phone:property.owner_phone||'',email:property.owner_email||'',notes:property.owner_notes||''});
     setEditMode(true);
   };
@@ -102,7 +105,7 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
     // Save property
     const res = await fetch(`/api/properties/${id}`, {
       method:'PUT', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({...editForm, price:Number(editForm.price), area:Number(editForm.area)||null, rooms:Number(editForm.rooms)||null, images:propertyImages, published:property!.published, cadastral_notes:cadastralNotes, contract_signed:contractSigned?1:0, reminder_text:reminderText, website_description:websiteDesc})
+      body: JSON.stringify({...editForm, price:Number(editForm.price), area:Number(editForm.area)||null, rooms:Number(editForm.rooms)||null, images:propertyImages, published:property!.published, cadastral_notes:cadastralNotes, contract_signed:contractSigned?1:0, reminder_text:reminderText, website_description:websiteDesc, agent_id:editForm.agent_id||null})
     });
     // Save owner changes too
     await fetch(`/api/owners/${property!.owner_id}`, {
@@ -156,6 +159,7 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
         cadastral_notes: cadastralNotes, contract_signed: contractSigned ? 1 : 0,
         reminder_text: reminderText, street: property.street, building_number: property.building_number,
         apartment_number: property.apartment_number, website_description: websiteDesc,
+        agent_id: property.agent_id || null,
       })
     });
     showToast('Podsetnik sačuvan ✓');
@@ -384,6 +388,7 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
                       cadastral_notes: cadastralNotes, contract_signed: contractSigned ? 1 : 0,
                       reminder_text: reminderText, street: property.street, building_number: property.building_number,
                       apartment_number: property.apartment_number, website_description: websiteDesc,
+                      agent_id: property.agent_id || null,
                     })
                   });
                   setSavingWebDesc(false);
@@ -426,8 +431,9 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
                 <div className="form-group"><label>Parking</label><select className="form-select" value={editForm.parking||''} onChange={e=>setEditForm({...editForm,parking:e.target.value})}><option value="">-</option><option>Garaža</option><option>Parking mesto</option><option>Ulica</option><option>Nema</option></select></div>
                 <div className="form-group"><label>Terasa</label><select className="form-select" value={editForm.terrace||''} onChange={e=>setEditForm({...editForm,terrace:e.target.value})}><option value="">-</option><option>Da</option><option>2 terase</option><option>Lodža</option><option>Balkon</option><option>Nema</option></select></div>
               </div>
-              <div className="form-group" style={{marginBottom:12}}><label>Grejanje</label><select className="form-select" value={editForm.heating||''} onChange={e=>setEditForm({...editForm,heating:e.target.value})}><option value="">-</option><option>Centralno</option><option>Etažno</option><option>Gas</option><option>Klima</option><option>TA peć</option></select></div>
+              <div className="form-group" style={{marginBottom:12}}><label>Grejanje</label><select className="form-select" value={editForm.heating||''} onChange={e=>setEditForm({...editForm,heating:e.target.value})}><option value="">-</option><option>Centralno</option><option>Etažno</option><option>Gas</option><option>Klima</option><option>TA peć</option><option>Struja</option></select></div>
               <div className="form-group" style={{marginBottom:12}}><label>Vlasnik</label><select className="form-select" value={editForm.owner_id||''} onChange={e=>setEditForm({...editForm,owner_id:e.target.value})}>{owners.map(o=><option key={o.id} value={o.id}>{o.first_name} {o.last_name} — {o.phone}</option>)}</select></div>
+              <div className="form-group" style={{marginBottom:12}}><label>Agent</label><select className="form-select" value={editForm.agent_id||''} onChange={e=>setEditForm({...editForm,agent_id:e.target.value})}><option value="">— Bez agenta —</option>{agents.map(a=><option key={a.id} value={a.id}>{a.full_name}</option>)}</select></div>
               <div className="form-group"><label>Opis</label><textarea className="form-textarea" value={editForm.description as string||''} onChange={e=>setEditForm({...editForm,description:e.target.value})} style={{minHeight:80}} /></div>
             </>) : (<>
               <div className="detail-row"><span className="detail-label">Cena</span><span className="detail-value" style={{color:'var(--gold)',fontSize:'1.1rem'}}>{formatPrice(property.price)}</span></div>
@@ -444,6 +450,7 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
                 </div>
               </div>
               <div className="detail-row"><span className="detail-label">Dodato</span><span className="detail-value">{new Date(property.created_at).toLocaleDateString('sr-RS')}</span></div>
+              <div className="detail-row"><span className="detail-label">Agent</span><span className="detail-value" style={{color:'var(--gold)'}}>{property.agent_name || '—'}</span></div>
               {(property.street || property.building_number || property.apartment_number) && (
                 <div style={{marginTop:12,padding:'10px 12px',background:'rgba(212,175,55,0.04)',borderRadius:8,border:'1px solid rgba(212,175,55,0.08)'}}>
                   <div className="detail-label" style={{marginBottom:6,color:'var(--gold)',fontSize:'0.72rem'}}>📍 Adresa</div>

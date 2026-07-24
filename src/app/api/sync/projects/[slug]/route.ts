@@ -10,18 +10,22 @@ const CRM_BASE = 'https://crm.apexrealestate.rs';
 export async function GET(request: Request, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const db = getDb();
-
-  // Get all projects and find by slug match
+  // Support both slug and ID lookups
+  const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slug);
+  
+  // Get all projects
   const projects = db.prepare(`
     SELECT p.id, p.name, p.location, p.description, p.total_units, p.images, p.website_description, p.completion_date
     FROM projects p
     ORDER BY p.created_at DESC
   `).all() as Record<string, unknown>[];
 
-  const project = projects.find(p => {
-    const projectSlug = (p.name as string).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/, '');
-    return projectSlug === slug;
-  });
+  const project = isUUID
+    ? projects.find(p => p.id === slug)
+    : projects.find(p => {
+        const projectSlug = (p.name as string).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/, '');
+        return projectSlug === slug;
+      });
 
   if (!project) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });

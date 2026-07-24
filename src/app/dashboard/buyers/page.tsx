@@ -64,6 +64,9 @@ export default function BuyersPage() {
     financing:'',desired_rooms:[] as string[],preferred_locations:[] as string[],
     priority:'low'
   });
+  const [agents, setAgents] = useState<{id:string;full_name:string;role:string}[]>([]);
+  const [filterAgent, setFilterAgent] = useState('');
+  const [currentUser, setCurrentUser] = useState<{id:string;full_name:string;role:string}|null>(null);
 
   const today = new Date().toISOString().split('T')[0];
 
@@ -71,10 +74,15 @@ export default function BuyersPage() {
     const p = new URLSearchParams();
     if (search) p.set('search', search);
     if (filterStatus) p.set('status', filterStatus);
+    if (filterAgent) p.set('agent_id', filterAgent);
     fetch(`/api/buyers?${p}`).then(r=>r.json()).then(d=>setBuyers(d.buyers||[]));
-  }, [search, filterStatus]);
+  }, [search, filterStatus, filterAgent]);
 
   useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    fetch('/api/agents').then(r=>r.json()).then(d=>setAgents(d.agents||[]));
+    fetch('/api/auth/me').then(r=>r.json()).then(d=>{ if(d.user) setCurrentUser(d.user); });
+  }, []);
 
   const showToast = (msg:string, type='success') => { setToast({msg,type}); setTimeout(()=>setToast(null), 3000); };
 
@@ -130,6 +138,7 @@ export default function BuyersPage() {
         next_action_date: form.next_action_date,
         status: form.status,
         priority: form.priority,
+        agent_id: currentUser?.id || null,
       })
     });
     if (res.ok) {
@@ -167,6 +176,10 @@ export default function BuyersPage() {
             <select className="filter-select" value={filterStatus} onChange={e=>setFilterStatus(e.target.value)}>
               <option value="">Svi statusi</option>
               <option>Aktivan</option><option>Pauzirana Potraga</option><option>Kupio Stan</option>
+            </select>
+            <select className="filter-select" value={filterAgent} onChange={e=>setFilterAgent(e.target.value)}>
+              <option value="">Svi agenti</option>
+              {agents.map(a=><option key={a.id} value={a.id}>{a.full_name}</option>)}
             </select>
             <select className="filter-select" value={filterType} onChange={e=>setFilterType(e.target.value)}>
               <option value="">Svi tipovi</option>

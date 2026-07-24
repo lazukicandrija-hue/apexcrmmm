@@ -207,6 +207,8 @@ function initializeSchema(database: Database.Database) {
   addColumnSafe('properties', 'building_number', 'TEXT');   // Broj zgrade/kuće
   addColumnSafe('properties', 'apartment_number', 'TEXT');  // Broj stana
   addColumnSafe('properties', 'website_description', 'TEXT'); // Opis za sajt
+  addColumnSafe('properties', 'agent_id', 'TEXT');             // FK to users — koji agent radi na nekretnini
+  addColumnSafe('buyers', 'agent_id', 'TEXT');                 // FK to users — koji agent radi sa kupcem
 
   // Migrate: add project publishing and website fields
   addColumnSafe('projects', 'published', 'INTEGER DEFAULT 0');        // 0=draft, 1=published on website

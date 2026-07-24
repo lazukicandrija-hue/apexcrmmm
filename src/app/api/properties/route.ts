@@ -28,13 +28,16 @@ export async function GET(request: Request) {
   const terrace = searchParams.get('terrace');
   const condition = searchParams.get('condition');
   const owner = searchParams.get('owner');
+  const agentId = searchParams.get('agent_id');
 
   const db = getDb();
   let query = `
     SELECT p.*, o.first_name as owner_first_name, o.last_name as owner_last_name, 
-           o.phone as owner_phone, o.email as owner_email
-    FROM properties p 
+           o.phone as owner_phone, o.email as owner_email,
+           u.full_name as agent_name
+    From properties p 
     LEFT JOIN owners o ON p.owner_id = o.id 
+    LEFT JOIN users u ON p.agent_id = u.id
     WHERE 1=1
   `;
   const params: (string | number)[] = [];
@@ -62,6 +65,7 @@ export async function GET(request: Request) {
   }
   const location = searchParams.get('location');
   if (location) { query += ` AND p.location = ?`; params.push(location); }
+  if (agentId) { query += ` AND p.agent_id = ?`; params.push(agentId); }
 
   const allowedSorts = ['price', 'area', 'created_at', 'title', 'rooms'];
   const sortCol = allowedSorts.includes(sort) ? sort : 'created_at';
@@ -90,8 +94,8 @@ export async function POST(request: Request) {
     const code = generatePropertyCode(db, body.type);
 
     db.prepare(`
-      INSERT INTO properties (id, code, title, description, location, price, type, area, rooms, status, owner_id, images, published, floor, condition, parking, terrace, heating, cadastral_notes, contract_signed, street, building_number, apartment_number, project_id)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO properties (id, code, title, description, location, price, type, area, rooms, status, owner_id, images, published, floor, condition, parking, terrace, heating, cadastral_notes, contract_signed, street, building_number, apartment_number, project_id, agent_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       id, code, body.title, body.description || '', body.location, price, body.type,
       area, rooms, body.status || 'Aktivna',
@@ -100,7 +104,8 @@ export async function POST(request: Request) {
       body.terrace || null, body.heating || null,
       body.cadastral_notes || null, body.contract_signed ? 1 : 0,
       body.street || null, body.building_number || null, body.apartment_number || null,
-      body.project_id || null
+      body.project_id || null,
+      body.agent_id || null
     );
 
     return NextResponse.json({ id, code, message: 'Nekretnina kreirana' }, { status: 201 });

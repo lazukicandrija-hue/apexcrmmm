@@ -25,7 +25,7 @@ export async function GET() {
               p.images, p.status, p.type, p.website_description, p.condition, 
              p.parking, p.terrace, p.heating, p.featured_order
       FROM properties p
-      WHERE p.project_id = ? AND p.published = 1 AND p.status = 'Aktivna'
+      WHERE p.project_id = ? AND p.published = 1
       ORDER BY p.code ASC
     `).all(project.id as string) as Record<string, unknown>[];
 
