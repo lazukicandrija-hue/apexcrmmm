@@ -8,6 +8,7 @@ interface Buyer {
   desired_type:string; location:string; budget:number; notes:string;
   next_action_date:string; status:string; created_at:string;
   financing:string; desired_rooms:string; preferred_locations:string;
+  agent_id:string;
 }
 interface NoteEntry { id:string; content:string; created_at:string; }
 interface PropertyMatch { property:{id:string;title:string;location:string;price:number;type:string;area:number;rooms:number;}; score:number; reasons:string[]; }
@@ -62,7 +63,9 @@ export default function BuyerDetailPage({ params }: { params: Promise<{ id: stri
   const [editTypes, setEditTypes] = useState<string[]>([]);
   const [editRooms, setEditRooms] = useState<string[]>([]);
   const [editLocations, setEditLocations] = useState<string[]>([]);
+  const [editAgent, setEditAgent] = useState('');
   const [saving, setSaving] = useState(false);
+  const [agents, setAgents] = useState<{id:string;full_name:string;role:string}[]>([]);
 
   const load = () => {
     fetch(`/api/buyers/${id}`).then(r=>r.json()).then(d=>{
@@ -78,6 +81,7 @@ export default function BuyerDetailPage({ params }: { params: Promise<{ id: stri
   };
 
   useEffect(load, [id]);
+  useEffect(() => { fetch('/api/agents').then(r=>r.json()).then(d=>setAgents(d.agents||[])); }, []);
 
   const showToast = (msg:string, type='success') => { setToast({msg,type}); setTimeout(()=>setToast(null), 3000); };
 
@@ -93,6 +97,7 @@ export default function BuyerDetailPage({ params }: { params: Promise<{ id: stri
     setEditTypes(parseArr(buyer.desired_type));
     setEditRooms(parseArr(buyer.desired_rooms));
     try { setEditLocations(JSON.parse(buyer.preferred_locations||'[]')); } catch { setEditLocations([]); }
+    setEditAgent(buyer.agent_id || '');
     setEditMode(true);
   };
   const cancelEdit = () => setEditMode(false);
@@ -115,6 +120,7 @@ export default function BuyerDetailPage({ params }: { params: Promise<{ id: stri
         next_action_date: nextActionDate||null,
         status,
         preferred_locations: JSON.stringify(editLocations),
+        agent_id: editAgent || null,
       })
     });
     if (res.ok) { showToast('Kupac ažuriran ✓'); setEditMode(false); load(); }
@@ -273,6 +279,13 @@ export default function BuyerDetailPage({ params }: { params: Promise<{ id: stri
                   })}
                 </div>
               </div>
+              <div className="form-group">
+                <label>Agent</label>
+                <select className="form-select" value={editAgent} onChange={e=>setEditAgent(e.target.value)}>
+                  <option value="">Nije dodeljen</option>
+                  {agents.map(a=><option key={a.id} value={a.id}>{a.full_name}</option>)}
+                </select>
+              </div>
               <div className="form-group"><label>Napomena</label><input className="form-input" value={editForm.location||''} onChange={e=>setEditForm({...editForm,location:e.target.value})} placeholder="Nešto specifično..." /></div>
               <div className="form-group"><label>Detaljne Napomene</label><textarea className="form-textarea" value={editForm.notes as string||''} onChange={e=>setEditForm({...editForm,notes:e.target.value})} style={{minHeight:80}} /></div>
             </>) : (<>
@@ -291,6 +304,10 @@ export default function BuyerDetailPage({ params }: { params: Promise<{ id: stri
                 </div>
               )}
             </>)}
+            <div className="detail-row">
+              <span className="detail-label">Agent</span>
+              <span className="detail-value">{agents.find(a=>a.id===buyer.agent_id)?.full_name || <span style={{color:'var(--gray-400)'}}>Nije dodeljen</span>}</span>
+            </div>
             <div className="detail-row">
               <span className="detail-label">Status</span>
               <select className="filter-select" value={status} onChange={e=>saveStatus(e.target.value)}

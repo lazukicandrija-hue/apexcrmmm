@@ -30,8 +30,10 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     const body = await request.json();
     const db = getDb();
 
-    // Partial update — just status, next_action_date, or priority
-    if (Object.keys(body).length <= 2 && (body.status !== undefined || body.next_action_date !== undefined || body.priority !== undefined)) {
+    // Partial update — just status, next_action_date, priority, or agent_id
+    const partialKeys = ['status', 'next_action_date', 'priority', 'agent_id'];
+    const bodyKeys = Object.keys(body);
+    if (bodyKeys.length <= 2 && bodyKeys.every(k => partialKeys.includes(k))) {
       if (body.status !== undefined) {
         db.prepare('UPDATE buyers SET status = ? WHERE id = ?').run(body.status, id);
       }
@@ -41,10 +43,16 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       if (body.priority !== undefined) {
         db.prepare('UPDATE buyers SET priority = ? WHERE id = ?').run(body.priority, id);
       }
+      if (body.agent_id !== undefined) {
+        db.prepare('UPDATE buyers SET agent_id = ? WHERE id = ?').run(body.agent_id || null, id);
+      }
       return NextResponse.json({ message: 'Kupac ažuriran' });
     }
 
-    // Full update
+    // Full update — preserve agent_id if not explicitly sent
+    const existing = db.prepare('SELECT agent_id FROM buyers WHERE id = ?').get(id) as { agent_id: string | null } | undefined;
+    const agentId = body.agent_id !== undefined ? (body.agent_id || null) : (existing?.agent_id ?? null);
+
     db.prepare(`
       UPDATE buyers SET first_name=?, last_name=?, phone=?, email=?, desired_type=?,
       location=?, budget=?, notes=?, next_action_date=?, status=?,
@@ -56,7 +64,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       body.financing || '', body.desired_rooms || '',
       body.preferred_locations ? (typeof body.preferred_locations === 'string' ? body.preferred_locations : JSON.stringify(body.preferred_locations)) : '',
       body.priority || 'low',
-      body.agent_id ?? null,
+      agentId,
       id
     );
     return NextResponse.json({ message: 'Kupac ažuriran' });

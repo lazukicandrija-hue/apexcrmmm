@@ -7,7 +7,7 @@ interface Buyer {
   desired_type:string; location:string; budget:number; notes:string;
   next_action_date:string; status:string; created_at:string;
   financing:string; desired_rooms:string; preferred_locations:string;
-  priority:string;
+  priority:string; agent_id:string;
 }
 
 const NOVI_SAD_LOKACIJE = [
