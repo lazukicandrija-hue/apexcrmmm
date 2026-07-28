@@ -212,7 +212,7 @@ export default function BuyersPage() {
         <div className="table-overflow">
           <table className="data-table">
             <thead><tr>
-              <th style={{width:50}}></th><th>Ime</th><th>Telefon</th><th>Tip</th><th>Sobe</th><th>Lokacije</th><th>Budžet</th><th>Sledeća Akcija</th><th>Status</th><th>Akcije</th>
+              <th style={{width:50}}></th><th>Ime</th><th>Telefon</th><th>Tip</th><th>Sobe</th><th>Lokacije</th><th>Budžet</th><th>Sledeća Akcija</th><th>Status</th><th>Agent</th><th>Akcije</th>
             </tr></thead>
             <tbody>
               {filteredBuyers.map(b => {
@@ -253,11 +253,24 @@ export default function BuyersPage() {
                       </span>
                     </td>
                     <td><span className={`badge ${b.status==='Aktivan'?'badge-active':b.status==='Pauzirana Potraga'?'badge-negotiation':'badge-sold'}`}>{b.status}</span></td>
+                    <td>
+                      <select
+                        value={b.agent_id || ''}
+                        onChange={async (e) => {
+                          await fetch(`/api/buyers/${b.id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ agent_id: e.target.value || null }) });
+                          load();
+                        }}
+                        style={{fontSize:'0.75rem',padding:'4px 22px 4px 6px',borderRadius:6,border:'1px solid rgba(212,175,55,0.2)',background:'rgba(255,255,255,0.04)',color:b.agent_id?'var(--gold)':'var(--gray-400)',cursor:'pointer',outline:'none',minWidth:80,appearance:'auto'}}
+                      >
+                        <option value="" style={{background:'#1a1a2e',color:'var(--gray-400)'}}>—</option>
+                        {agents.map(a=><option key={a.id} value={a.id} style={{background:'#1a1a2e',color:'#fff'}}>{a.full_name}</option>)}
+                      </select>
+                    </td>
                     <td><button className="btn-danger btn-sm" onClick={()=>handleDelete(b.id)}>🗑</button></td>
                   </tr>
                 );
               })}
-              {filteredBuyers.length===0 && <tr><td colSpan={10} style={{textAlign:'center',padding:40,color:'var(--gray-300)'}}>{buyers.length > 0 ? 'Nema kupaca sa ovim filterima' : 'Nema kupaca'}</td></tr>}
+              {filteredBuyers.length===0 && <tr><td colSpan={11} style={{textAlign:'center',padding:40,color:'var(--gray-300)'}}>{buyers.length > 0 ? 'Nema kupaca sa ovim filterima' : 'Nema kupaca'}</td></tr>}
             </tbody>
           </table>
         </div>
