@@ -391,6 +391,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                     <th>Sobe</th>
                     <th>Cena</th>
                     <th>Status</th>
+                    <th>Skica</th>
                     <th></th>
                   </tr>
                 </thead>
@@ -412,6 +413,19 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                           {unit.status}
                         </span>
                       </td>
+                      <td className="ng-cell-skica">
+                        {(() => {
+                          const imgs: string[] = JSON.parse(unit.images || '[]');
+                          return imgs.length > 0 ? (
+                            <a href={imgs[0]} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} className="ng-btn-plan">
+                              <img src={imgs[0]} alt="Skica" style={{ width: 36, height: 36, objectFit: 'cover', borderRadius: 4, border: '1px solid rgba(212,175,55,0.3)' }} />
+                              Skica
+                            </a>
+                          ) : (
+                            <span style={{ color: '#666', fontSize: '0.75rem' }}>—</span>
+                          );
+                        })()}
+                      </td>
                       <td>
                         <button className="btn-gold btn-sm" onClick={() => router.push(`/dashboard/properties/${unit.id}`)} style={{ fontSize: '0.72rem', padding: '4px 10px' }}>Otvori →</button>
                       </td>
@@ -419,7 +433,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                   ))}
                   {units.length === 0 && (
                     <tr>
-                      <td colSpan={8} style={{ textAlign: 'center', color: '#666', padding: '2rem' }}>
+                      <td colSpan={9} style={{ textAlign: 'center', color: '#666', padding: '2rem' }}>
                         Nema stanova u ovom projektu. Klikni &quot;+ Dodaj Stan&quot; iznad.
                       </td>
                     </tr>

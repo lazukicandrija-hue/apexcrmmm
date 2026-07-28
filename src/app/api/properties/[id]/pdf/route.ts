@@ -111,9 +111,16 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   ` : ''}
 
   ${images.length > 0 ? `
+  <div class="section-title">Osnova Stana</div>
+  <div style="text-align:center;margin:12px 0 24px">
+    <img src="${images[0].startsWith('http') ? images[0] : 'https://crm.apexrealestate.rs' + images[0]}" alt="Osnova stana" style="max-width:100%;max-height:500px;border-radius:8px;border:1px solid #eee" />
+  </div>
+  ` : ''}
+
+  ${images.length > 1 ? `
   <div class="section-title">Galerija</div>
   <div class="images-grid">
-    ${images.slice(0, 6).map(img => `<img src="${img.startsWith('http') ? img : 'https://crm.apexrealestate.rs' + img}" alt="" />`).join('')}
+    ${images.slice(1, 7).map(img => `<img src="${img.startsWith('http') ? img : 'https://crm.apexrealestate.rs' + img}" alt="" />`).join('')}
   </div>
   ` : ''}
 

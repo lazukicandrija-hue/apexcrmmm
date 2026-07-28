@@ -4,6 +4,13 @@ import type { NextRequest } from 'next/server';
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // Serve uploaded files: rewrite /uploads/* → /api/uploads/*
+  if (pathname.startsWith('/uploads/')) {
+    const newUrl = request.nextUrl.clone();
+    newUrl.pathname = `/api${pathname}`;
+    return NextResponse.rewrite(newUrl);
+  }
+
   // Protect dashboard routes
   if (pathname.startsWith('/dashboard')) {
     const token = request.cookies.get('apex_token')?.value;
@@ -36,5 +43,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/', '/dashboard/:path*'],
+  matcher: ['/', '/dashboard/:path*', '/uploads/:path*'],
 };
