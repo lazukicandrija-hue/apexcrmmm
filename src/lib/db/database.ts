@@ -221,6 +221,9 @@ function initializeSchema(database: Database.Database) {
   // Migrate: rename Starogradnja -> Sekundarni Stanovi and move standalone Novogradnja
   migratePropertyTypes(database);
 
+  // Fix properties with epoch dates (1970-01-01) - set them to current datetime
+  fixEpochDates(database);
+
   // Seed admin user and default agent if no users exist (first run only)
   const userCount = database.prepare('SELECT COUNT(*) as count FROM users').get() as { count: number };
   if (userCount.count === 0) {
@@ -294,3 +297,15 @@ function migratePropertyTypes(database: Database.Database) {
   database.prepare(`UPDATE properties SET type = 'Sekundarni Stanovi' WHERE type = 'Novogradnja' AND (project_id IS NULL OR project_id = '')`).run();
 }
 
+function fixEpochDates(database: Database.Database) {
+  const now = new Date().toISOString();
+  // Fix properties with null or epoch dates (1970-01-01)
+  database.prepare(`
+    UPDATE properties SET created_at = ? 
+    WHERE created_at IS NULL OR created_at LIKE '1970%'
+  `).run(now);
+  database.prepare(`
+    UPDATE properties SET updated_at = ? 
+    WHERE updated_at IS NULL OR updated_at LIKE '1970%'
+  `).run(now);
+}

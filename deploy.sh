@@ -17,7 +17,7 @@ git push origin main
 
 # Deploy to server
 echo "🔄 Deploying to server..."
-ssh root@46.101.250.53 '
+ssh root@104.236.69.230 '
   set -e
   cd /opt/apex-crm
 

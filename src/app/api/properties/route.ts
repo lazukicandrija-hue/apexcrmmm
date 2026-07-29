@@ -93,9 +93,10 @@ export async function POST(request: Request) {
     // Auto-generate property code
     const code = generatePropertyCode(db, body.type);
 
+    const now = new Date().toISOString();
     db.prepare(`
-      INSERT INTO properties (id, code, title, description, location, price, type, area, rooms, status, owner_id, images, published, floor, condition, parking, terrace, heating, cadastral_notes, contract_signed, street, building_number, apartment_number, project_id, agent_id)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO properties (id, code, title, description, location, price, type, area, rooms, status, owner_id, images, published, floor, condition, parking, terrace, heating, cadastral_notes, contract_signed, street, building_number, apartment_number, project_id, agent_id, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       id, code, body.title, body.description || '', body.location, price, body.type,
       area, rooms, body.status || 'Aktivna',
@@ -105,7 +106,8 @@ export async function POST(request: Request) {
       body.cadastral_notes || null, body.contract_signed ? 1 : 0,
       body.street || null, body.building_number || null, body.apartment_number || null,
       body.project_id || null,
-      body.agent_id || null
+      body.agent_id || null,
+      now, now
     );
 
     return NextResponse.json({ id, code, message: 'Nekretnina kreirana' }, { status: 201 });
