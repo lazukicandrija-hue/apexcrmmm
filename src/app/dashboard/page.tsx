@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 
 interface Property { id:string; title:string; location:string; price:number; type:string; status:string; created_at:string; next_action_date:string; reminder_text:string; }
-interface Buyer { id:string; first_name:string; last_name:string; next_action_date:string; status:string; desired_type:string; location:string; budget:number; }
+interface Buyer { id:string; first_name:string; last_name:string; next_action_date:string; status:string; desired_type:string; location:string; budget:number; agent_id:string|null; }
 interface Analytics {
   byType: {type:string;count:number}[];
   byStatus: {status:string;count:number}[];
@@ -19,16 +19,23 @@ const STATUS_COLORS: Record<string,string> = {'Aktivna':'#4caf50','Prodato':'#21
 
 export default function DashboardPage() {
   const [properties, setProperties] = useState<Property[]>([]);
-  const [buyers, setBuyers] = useState<Buyer[]>([]);
+  const [allBuyers, setAllBuyers] = useState<Buyer[]>([]);
   const [analytics, setAnalytics] = useState<Analytics|null>(null);
   const [showPopup, setShowPopup] = useState(false);
   const [popupDismissed, setPopupDismissed] = useState(false);
+  const [currentUser, setCurrentUser] = useState<{id:string;role:string}|null>(null);
 
   useEffect(() => {
     fetch('/api/properties').then(r=>r.json()).then(d=>setProperties(d.properties||[]));
-    fetch('/api/buyers').then(r=>r.json()).then(d=>setBuyers(d.buyers||[]));
+    fetch('/api/buyers').then(r=>r.json()).then(d=>setAllBuyers(d.buyers||[]));
     fetch('/api/analytics').then(r=>r.json()).then(d=>setAnalytics(d));
+    fetch('/api/auth/me').then(r=>r.json()).then(d=>{ if(d.user) setCurrentUser(d.user); });
   }, []);
+
+  // Agents only see reminders for their own buyers; admin sees all
+  const buyers = currentUser && currentUser.role !== 'admin'
+    ? allBuyers.filter(b => b.agent_id === currentUser.id)
+    : allBuyers;
 
   const activeProps = properties.filter(p => p.status === 'Aktivna').length;
   const soldProps = properties.filter(p => p.status === 'Prodato').length;
