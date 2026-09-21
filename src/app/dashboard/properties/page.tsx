@@ -51,7 +51,7 @@ function PropertiesPageInner() {
     title:'',description:'',location:'',price:'',type:category || 'Sekundarni Stanovi',area:'',rooms:'',
     status:'Aktivna',owner_id:'',newOwnerName:'',newOwnerPhone:'',
     newOwnerEmail:'',newOwnerNotes:'',createNewOwner:true,
-    floor:'',condition:'',parking:'',terrace:'',heating:'',
+    floor:'',condition:'',parking:'',terrace:'',heating:'',lift:'',
     street:'',building_number:'',apartment_number:'',project_id:''
   });
   const [projectForm, setProjectForm] = useState({name:'',location:'',description:'',developer:'',total_units:''});
@@ -135,7 +135,7 @@ function PropertiesPageInner() {
         showToast('Nekretnina kreirana!');
         setShowModal(false);
         load();
-        setForm({title:'',description:'',location:'',price:'',type:category || 'Sekundarni Stanovi',area:'',rooms:'',status:'Aktivna',owner_id:'',newOwnerName:'',newOwnerPhone:'',newOwnerEmail:'',newOwnerNotes:'',createNewOwner:true,floor:'',condition:'',parking:'',terrace:'',heating:'',street:'',building_number:'',apartment_number:'',project_id:''});
+        setForm({title:'',description:'',location:'',price:'',type:category || 'Sekundarni Stanovi',area:'',rooms:'',status:'Aktivna',owner_id:'',newOwnerName:'',newOwnerPhone:'',newOwnerEmail:'',newOwnerNotes:'',createNewOwner:true,floor:'',condition:'',parking:'',terrace:'',heating:'',lift:'',street:'',building_number:'',apartment_number:'',project_id:''});
       } else {
         const d = await res.json();
         showToast(d.error||'Greška pri kreiranju nekretnine','error');
@@ -544,6 +544,14 @@ function PropertiesPageInner() {
                   <select className="form-select" value={form.heating} onChange={e=>setForm({...form,heating:e.target.value})}>
                     <option value="">-</option>
                     <option>Centralno</option><option>Etažno</option><option>Gas</option><option>Klima</option><option>TA peć</option><option>Struja</option><option>Toplotna pumpa</option><option>Podno grejanje</option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label>Lift</label>
+                  <select className="form-select" value={form.lift} onChange={e=>setForm({...form,lift:e.target.value})}>
+                    <option value="">-</option>
+                    <option>Da</option><option>Ne</option>
                   </select>
                 </div>
 

@@ -12,7 +12,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   
   const property = db.prepare(`
     SELECT p.id, p.title, p.website_description, p.location, p.price, p.type, p.area, p.rooms,
-           p.images, p.created_at, p.floor, p.condition, p.parking, p.terrace, p.heating, p.featured_order
+           p.images, p.created_at, p.floor, p.condition, p.parking, p.terrace, p.heating, p.lift, p.featured_order
     FROM properties p
     WHERE p.id = ? AND p.published = 1 AND p.status = 'Aktivna'
   `).get(id) as Record<string, unknown> | undefined;
@@ -37,6 +37,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     parking: property.parking || null,
     terrace: property.terrace || null,
     heating: property.heating || null,
+    lift: property.lift || null,
     featured_order: property.featured_order || null,
     featured: property.featured_order !== null,
   };

@@ -95,8 +95,8 @@ export async function POST(request: Request) {
 
     const now = new Date().toISOString();
     db.prepare(`
-      INSERT INTO properties (id, code, title, description, location, price, type, area, rooms, status, owner_id, images, published, floor, condition, parking, terrace, heating, cadastral_notes, contract_signed, street, building_number, apartment_number, project_id, agent_id, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO properties (id, code, title, description, location, price, type, area, rooms, status, owner_id, images, published, floor, condition, parking, terrace, heating, cadastral_notes, contract_signed, street, building_number, apartment_number, project_id, agent_id, lift, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       id, code, body.title, body.description || '', body.location, price, body.type,
       area, rooms, body.status || 'Aktivna',
@@ -107,6 +107,7 @@ export async function POST(request: Request) {
       body.street || null, body.building_number || null, body.apartment_number || null,
       body.project_id || null,
       body.agent_id || null,
+      body.lift || null,
       now, now
     );
 

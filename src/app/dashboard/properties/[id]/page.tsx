@@ -8,7 +8,7 @@ interface Property {
   area:number; rooms:number; status:string; published:number; images:string; next_action_date:string;
   owner_first_name:string; owner_last_name:string; owner_phone:string; owner_email:string; owner_notes:string;
   owner_id:string; created_at:string; updated_at:string;
-  floor:string; condition:string; parking:string; terrace:string; heating:string;
+  floor:string; condition:string; parking:string; terrace:string; heating:string; lift:string;
   cadastral_notes:string; contract_signed:number; reminder_text:string;
   street:string; building_number:string; apartment_number:string;
   agent_id:string; agent_name:string;
@@ -95,7 +95,7 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
 
   const enterEdit = () => {
     if (!property) return;
-    setEditForm({title:property.title,description:property.description||'',location:property.location,price:property.price,type:property.type,area:property.area||0,rooms:property.rooms||0,status:property.status,owner_id:property.owner_id,floor:property.floor||'',condition:property.condition||'',parking:property.parking||'',terrace:property.terrace||'',heating:property.heating||'',street:property.street||'',building_number:property.building_number||'',apartment_number:property.apartment_number||'',agent_id:property.agent_id||''});
+    setEditForm({title:property.title,description:property.description||'',location:property.location,price:property.price,type:property.type,area:property.area||0,rooms:property.rooms||0,status:property.status,owner_id:property.owner_id,floor:property.floor||'',condition:property.condition||'',parking:property.parking||'',terrace:property.terrace||'',heating:property.heating||'',street:property.street||'',building_number:property.building_number||'',apartment_number:property.apartment_number||'',agent_id:property.agent_id||'',lift:property.lift||''});
     setOwnerForm({first_name:property.owner_first_name||'',last_name:property.owner_last_name||'',phone:property.owner_phone||'',email:property.owner_email||'',notes:property.owner_notes||''});
     setEditMode(true);
   };
@@ -159,7 +159,7 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
         cadastral_notes: cadastralNotes, contract_signed: contractSigned ? 1 : 0,
         reminder_text: reminderText, street: property.street, building_number: property.building_number,
         apartment_number: property.apartment_number, website_description: websiteDesc,
-        agent_id: property.agent_id || null,
+        agent_id: property.agent_id || null, lift: property.lift || null,
       })
     });
     showToast('Podsetnik sačuvan ✓');
@@ -253,6 +253,7 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
     if (p.heating) lines.push(`🔥 Grejanje: ${p.heating}`);
     if (p.parking) lines.push(`🅿️ Parking: ${p.parking}`);
     if (p.terrace) lines.push(`🌿 Terasa: ${p.terrace}`);
+    if (p.lift) lines.push(`🛗 Lift: ${p.lift}`);
     if (p.condition) lines.push(`🔧 Stanje: ${p.condition}`);
     if (p.description) lines.push('', p.description);
     lines.push('', '📞 APEX Real Estate', '🌐 apexrealestate.rs');
@@ -388,7 +389,7 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
                       cadastral_notes: cadastralNotes, contract_signed: contractSigned ? 1 : 0,
                       reminder_text: reminderText, street: property.street, building_number: property.building_number,
                       apartment_number: property.apartment_number, website_description: websiteDesc,
-                      agent_id: property.agent_id || null,
+                      agent_id: property.agent_id || null, lift: property.lift || null,
                     })
                   });
                   setSavingWebDesc(false);
@@ -432,6 +433,7 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
                 <div className="form-group"><label>Terasa</label><select className="form-select" value={editForm.terrace||''} onChange={e=>setEditForm({...editForm,terrace:e.target.value})}><option value="">-</option><option>Da</option><option>2 terase</option><option>Lodža</option><option>Balkon</option><option>Nema</option></select></div>
               </div>
               <div className="form-group" style={{marginBottom:12}}><label>Grejanje</label><select className="form-select" value={editForm.heating||''} onChange={e=>setEditForm({...editForm,heating:e.target.value})}><option value="">-</option><option>Centralno</option><option>Etažno</option><option>Gas</option><option>Klima</option><option>TA peć</option><option>Struja</option><option>Toplotna pumpa</option><option>Podno grejanje</option></select></div>
+              <div className="form-group" style={{marginBottom:12}}><label>Lift</label><select className="form-select" value={editForm.lift||''} onChange={e=>setEditForm({...editForm,lift:e.target.value})}><option value="">-</option><option>Da</option><option>Ne</option></select></div>
               <div className="form-group" style={{marginBottom:12}}><label>Vlasnik</label><select className="form-select" value={editForm.owner_id||''} onChange={e=>setEditForm({...editForm,owner_id:e.target.value})}>{owners.map(o=><option key={o.id} value={o.id}>{o.first_name} {o.last_name} — {o.phone}</option>)}</select></div>
               <div className="form-group" style={{marginBottom:12}}><label>Agent</label><select className="form-select" value={editForm.agent_id||''} onChange={e=>setEditForm({...editForm,agent_id:e.target.value})}><option value="">— Bez agenta —</option>{agents.map(a=><option key={a.id} value={a.id}>{a.full_name}</option>)}</select></div>
               <div className="form-group"><label>Opis</label><textarea className="form-textarea" value={editForm.description as string||''} onChange={e=>setEditForm({...editForm,description:e.target.value})} style={{minHeight:80}} /></div>
@@ -466,6 +468,7 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
               {property.parking && <div className="detail-row"><span className="detail-label">Parking</span><span className="detail-value">{property.parking}</span></div>}
               {property.terrace && <div className="detail-row"><span className="detail-label">Terasa</span><span className="detail-value">{property.terrace}</span></div>}
               {property.heating && <div className="detail-row"><span className="detail-label">Grejanje</span><span className="detail-value">{property.heating}</span></div>}
+              {property.lift && <div className="detail-row"><span className="detail-label">Lift</span><span className="detail-value">{property.lift}</span></div>}
               {property.description && <div style={{marginTop:16}}><div className="detail-label" style={{marginBottom:8}}>Opis</div><p style={{fontSize:'0.88rem',lineHeight:1.6,color:'var(--gray-200)'}}>{property.description}</p></div>}
             </>)}
           </div>

@@ -45,7 +45,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       UPDATE properties SET title=?, description=?, notes=?, location=?, price=?, type=?, area=?, rooms=?,
       status=?, owner_id=?, images=?, published=?, floor=?, condition=?, parking=?, terrace=?, heating=?,
       cadastral_notes=?, contract_signed=?, reminder_text=?, website_description=?,
-      street=?, building_number=?, apartment_number=?, agent_id=?,
+      street=?, building_number=?, apartment_number=?, agent_id=?, lift=?,
       updated_at=datetime('now') WHERE id=?
     `).run(
       body.title, body.description || '', body.notes ?? old.notes ?? '', body.location, price, body.type,
@@ -57,6 +57,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       body.reminder_text ?? old.reminder_text ?? null, body.website_description ?? old.website_description ?? null,
       body.street ?? old.street ?? null, body.building_number ?? old.building_number ?? null, body.apartment_number ?? old.apartment_number ?? null,
       body.agent_id ?? old.agent_id ?? null,
+      body.lift ?? old.lift ?? null,
       id
     );
 
@@ -85,6 +86,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       { key: 'apartment_number', label: 'Broj stana' },
       { key: 'website_description', label: 'Opis za sajt' },
       { key: 'agent_id', label: 'Agent' },
+      { key: 'lift', label: 'Lift' },
     ];
 
     const insertAudit = db.prepare(

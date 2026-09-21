@@ -35,7 +35,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ slug
   const units = db.prepare(`
     SELECT p.id, p.title, p.location, p.price, p.area, p.rooms, p.floor,
            p.images, p.status, p.type, p.website_description, p.condition,
-           p.parking, p.terrace, p.heating, p.featured_order
+           p.parking, p.terrace, p.heating, p.lift, p.featured_order
     FROM properties p
     WHERE p.project_id = ? AND p.published = 1 AND p.status IN ('Aktivna', 'Prodato')
     ORDER BY p.code ASC
@@ -57,6 +57,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ slug
     parking: u.parking || null,
     terrace: u.terrace || null,
     heating: u.heating || null,
+    lift: u.lift || null,
     featured_order: u.featured_order || null,
   }));
 

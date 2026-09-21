@@ -10,7 +10,7 @@ export async function GET() {
   const db = getDb();
   const properties = db.prepare(`
     SELECT p.id, p.title, p.website_description, p.location, p.price, p.type, p.area, p.rooms,
-           p.images, p.created_at, p.floor, p.condition, p.parking, p.terrace, p.heating, p.featured_order
+           p.images, p.created_at, p.floor, p.condition, p.parking, p.terrace, p.heating, p.lift, p.featured_order
     FROM properties p
     WHERE p.published = 1 AND p.status = 'Aktivna' AND p.type != 'Novogradnja'
     ORDER BY 
@@ -35,6 +35,7 @@ export async function GET() {
     parking: p.parking || null,
     terrace: p.terrace || null,
     heating: p.heating || null,
+    lift: p.lift || null,
     featured_order: p.featured_order || null,
     featured: p.featured_order !== null,
   }));
