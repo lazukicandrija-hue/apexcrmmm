@@ -120,6 +120,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
   const headersList = await headers();
   const user = getCurrentUser(headersList.get('cookie'));
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (user.role !== 'admin') return NextResponse.json({ error: 'Samo admin može da briše' }, { status: 403 });
 
   const { id } = await params;
   const db = getDb();

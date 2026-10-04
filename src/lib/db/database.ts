@@ -29,6 +29,9 @@ export function getDb(): Database.Database {
     db = new Database(DB_PATH);
     db.pragma('journal_mode = WAL');
     db.pragma('foreign_keys = ON');
+    // Old databases still carry CHECK(type IN (...)) from before 'Sekundarni Stanovi'/'Kuće' existed;
+    // SQLite can't alter a CHECK in place, so skip it instead of rebuilding the table.
+    db.pragma('ignore_check_constraints = ON');
     // Ensure WAL checkpoints happen regularly so data isn't stuck in WAL file
     db.pragma('wal_autocheckpoint = 100');
     initializeSchema(db);

@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db/database';
+import { getCurrentUser } from '@/lib/auth';
 
 // GET /api/price-lists/[id] — investor details + all units
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const user = getCurrentUser(request.headers.get('cookie'));
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
   try {
     const { id } = await params;
     const db = getDb();
@@ -17,6 +21,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
 // PUT /api/price-lists/[id] — update investor
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const user = getCurrentUser(request.headers.get('cookie'));
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
   try {
     const { id } = await params;
     const db = getDb();
@@ -44,6 +51,9 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
 // DELETE /api/price-lists/[id] — delete investor and all units
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const user = getCurrentUser(request.headers.get('cookie'));
+  if (!user || user.role !== 'admin') return NextResponse.json({ error: 'Samo admin može da briše' }, { status: 403 });
+
   try {
     const { id } = await params;
     const db = getDb();

@@ -39,7 +39,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       const buffer = Buffer.from(bytes);
       
       // Generate unique filename
-      const ext = file.name.split('.').pop() || 'jpg';
+      // Only raster images (SVG can carry scripts)
+      const ext = (file.name.split('.').pop() || '').toLowerCase();
+      if (!['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(ext)) continue;
       const filename = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
       const filePath = path.join(uploadDir, filename);
       

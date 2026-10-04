@@ -3,8 +3,24 @@ import bcrypt from 'bcryptjs';
 import { getDb } from './db/database';
 import { v4 as uuidv4 } from 'uuid';
 import crypto from 'crypto';
+import fs from 'fs';
+import path from 'path';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'apex-crm-secret-key-2026-change-in-production';
+// Secret for signing login tokens: env var if set, otherwise a random secret
+// generated once and stored next to the database (never hard-coded in the repo).
+function loadJwtSecret(): string {
+  if (process.env.JWT_SECRET) return process.env.JWT_SECRET;
+  const file = path.join(process.env.DATA_DIR || process.cwd(), '.jwt-secret');
+  try {
+    const existing = fs.readFileSync(file, 'utf8').trim();
+    if (existing) return existing;
+  } catch { /* first run */ }
+  const secret = crypto.randomBytes(48).toString('hex');
+  fs.writeFileSync(file, secret, { mode: 0o600 });
+  return secret;
+}
+
+const JWT_SECRET = loadJwtSecret();
 
 export interface UserPayload {
   id: string;

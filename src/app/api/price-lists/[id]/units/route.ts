@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db/database';
+import { getCurrentUser } from '@/lib/auth';
 import { v4 as uuidv4 } from 'uuid';
 
 // GET /api/price-lists/[id]/units — list units for investor
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const user = getCurrentUser(request.headers.get('cookie'));
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
   try {
     const { id } = await params;
     const db = getDb();
@@ -16,6 +20,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
 // POST /api/price-lists/[id]/units — add unit to investor
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const user = getCurrentUser(request.headers.get('cookie'));
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
   try {
     const { id } = await params;
     const db = getDb();

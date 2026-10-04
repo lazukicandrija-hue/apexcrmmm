@@ -6,7 +6,7 @@ import { headers } from 'next/headers';
 export async function GET() {
   const headersList = await headers();
   const user = getCurrentUser(headersList.get('cookie'));
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!user || user.role !== 'admin') return NextResponse.json({ error: 'Samo admin može da izveze podatke' }, { status: 403 });
 
   const db = getDb();
   const properties = db.prepare(`

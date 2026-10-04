@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db/database';
+import { getCurrentUser } from '@/lib/auth';
 import { v4 as uuidv4 } from 'uuid';
 
 // GET /api/price-lists — list all investors with unit counts
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const user = getCurrentUser(request.headers.get('cookie'));
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
   try {
     const db = getDb();
     const investors = db.prepare(`
@@ -22,6 +26,9 @@ export async function GET() {
 
 // POST /api/price-lists — create new investor
 export async function POST(request: NextRequest) {
+  const user = getCurrentUser(request.headers.get('cookie'));
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
   try {
     const db = getDb();
     const body = await request.json();

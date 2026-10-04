@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db/database';
+import { getCurrentUser } from '@/lib/auth';
 
 // PUT /api/price-lists/units/[unitId] — update unit
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ unitId: string }> }) {
+  const user = getCurrentUser(request.headers.get('cookie'));
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
   try {
     const { unitId } = await params;
     const db = getDb();
@@ -36,6 +40,9 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
 // DELETE /api/price-lists/units/[unitId] — delete unit
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ unitId: string }> }) {
+  const user = getCurrentUser(request.headers.get('cookie'));
+  if (!user || user.role !== 'admin') return NextResponse.json({ error: 'Samo admin može da briše' }, { status: 403 });
+
   try {
     const { unitId } = await params;
     const db = getDb();
