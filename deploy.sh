@@ -3,9 +3,13 @@
 # Usage: ./deploy.sh
 #
 # CRITICAL: The database lives in /opt/apex-crm/data/ and is NEVER touched
-# by git pull or npm run build. Backups are created before every deployment.
+# by git pull or npm run build. A verified backup is made before every deployment
+# and a copy is downloaded to this Mac (~/APEX-CRM-backups).
 
 set -e
+
+SERVER=root@209.38.255.31   # droplet "apex-crm" (104.236.69.230 was destroyed on 2026-10-02)
+LOCAL_BACKUPS=~/APEX-CRM-backups
 
 echo "🚀 Deploying Apex CRM..."
 
@@ -17,26 +21,20 @@ git push origin main
 
 # Deploy to server
 echo "🔄 Deploying to server..."
-ssh root@104.236.69.230 '
+ssh $SERVER '
   set -e
   cd /opt/apex-crm
 
   # ===== STEP 1: Create persistent data directory if it does not exist =====
-  mkdir -p /opt/apex-crm/data
-  mkdir -p /opt/apex-crm/data/backups
-  mkdir -p /opt/apex-crm/data/uploads
+  mkdir -p /opt/apex-crm/data/backups /opt/apex-crm/data/uploads
 
-  # ===== STEP 2: Backup the database BEFORE doing anything =====
-  if [ -f /opt/apex-crm/data/apex-crm.db ]; then
-    BACKUP_NAME="apex-crm_$(date +%Y%m%d_%H%M%S).db"
-    cp /opt/apex-crm/data/apex-crm.db /opt/apex-crm/data/backups/$BACKUP_NAME
-    echo "✅ Database backed up: $BACKUP_NAME"
-    # Also checkpoint WAL to ensure all data is in the main db file
-    sqlite3 /opt/apex-crm/data/apex-crm.db "PRAGMA wal_checkpoint(TRUNCATE);" 2>/dev/null || true
-  fi
-
-  # ===== STEP 3: Pull code (this NEVER touches the data directory) =====
+  # ===== STEP 2: Pull code (this NEVER touches the data directory) =====
   git pull origin main
+
+  # ===== STEP 3: Backup the database BEFORE building (consistent copy incl. WAL) =====
+  if [ -f /opt/apex-crm/data/apex-crm.db ]; then
+    DATA_DIR=/opt/apex-crm/data node scripts/backup-db.js deploy
+  fi
 
   # ===== STEP 4: Build the application =====
   npm install
@@ -47,9 +45,7 @@ ssh root@104.236.69.230 '
   cp -r .next/static .next/standalone/.next/static 2>/dev/null || true
 
   # ===== STEP 6: Remove any stale database from standalone (it must use /data/) =====
-  rm -f .next/standalone/apex-crm.db
-  rm -f .next/standalone/apex-crm.db-wal
-  rm -f .next/standalone/apex-crm.db-shm
+  rm -f .next/standalone/apex-crm.db .next/standalone/apex-crm.db-wal .next/standalone/apex-crm.db-shm
 
   # ===== STEP 7: Restart with DATA_DIR environment variable =====
   pm2 delete apex-crm 2>/dev/null || true
@@ -57,16 +53,22 @@ ssh root@104.236.69.230 '
   DATA_DIR=/opt/apex-crm/data PORT=3001 pm2 start server.js --name apex-crm --cwd /opt/apex-crm/.next/standalone
   pm2 save
 
+  # ===== STEP 8: Daily automatic backup at 03:00 (installed once, idempotent) =====
+  CRON_LINE="0 3 * * * cd /opt/apex-crm && DATA_DIR=/opt/apex-crm/data node scripts/backup-db.js daily >> /opt/apex-crm/data/backups/backup.log 2>&1"
+  ( crontab -l 2>/dev/null | grep -v "scripts/backup-db.js daily"; echo "$CRON_LINE" ) | crontab -
+
   echo ""
   echo "✅ Deploy complete!"
   echo "📂 Database location: /opt/apex-crm/data/apex-crm.db"
   echo "📦 Backups: /opt/apex-crm/data/backups/"
-
-  # ===== STEP 8: Clean up old backups (keep last 30) =====
-  cd /opt/apex-crm/data/backups
-  ls -t *.db 2>/dev/null | tail -n +31 | xargs rm -f 2>/dev/null || true
 '
+
+# ===== Keep a copy of the newest backup on this Mac (off-server) =====
+mkdir -p $LOCAL_BACKUPS
+LATEST=$(ssh $SERVER 'ls -t /opt/apex-crm/data/backups/apex-crm_deploy_*.db 2>/dev/null | head -1')
+if [ -n "$LATEST" ]; then
+  scp -q "$SERVER:$LATEST" "$LOCAL_BACKUPS/" && echo "💾 Local copy: $LOCAL_BACKUPS/$(basename $LATEST)"
+fi
 
 echo ""
 echo "✅ CRM deployed! Visit: https://crm.apexrealestate.rs"
-echo "📂 Database is safely stored in /opt/apex-crm/data/"
