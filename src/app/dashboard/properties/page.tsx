@@ -29,7 +29,7 @@ const NOVI_SAD_LOKACIJE = [
   'Šangaj','Somborski Bulevar','Bulevar Oslobođenja',
   'Kej','Riblja Pijaca','Šarengrad','Karadjordjevo','Slana Bara',
   'Industrijska Zona','Rimski Šančevi','Stepanovićevo','Čenej',
-  'Kovilj','Begeč','Ledinci','Paragovo','Popovica','Bukovac',
+  'Kovilj','Begeč','Ledinci','Paragovo','Popovica','Bukovac','Temerin',
 ];
 
 function PropertiesPageInner() {

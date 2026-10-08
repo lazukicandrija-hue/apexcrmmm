@@ -28,7 +28,7 @@ const NOVI_SAD_LOKACIJE = [
   '\u0160angaj','Somborski Bulevar','Bulevar Oslobo\u0111enja',
   'Kej','Riblja Pijaca','\u0160arengrad','Karadjordjevo','Slana Bara',
   'Industrijska Zona','Rimski \u0160an\u010devi','Stepanovi\u0107evo','\u010cenej',
-  'Kovilj','Bege\u010d','Ledinci','Paragovo','Popovica','Bukovac',
+  'Kovilj','Bege\u010d','Ledinci','Paragovo','Popovica','Bukovac','Temerin',
 ];
 
 export default function PropertyDetailPage({ params }: { params: Promise<{ id: string }> }) {
