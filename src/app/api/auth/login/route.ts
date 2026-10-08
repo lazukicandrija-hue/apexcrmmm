@@ -19,7 +19,7 @@ export async function POST(request: Request) {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 86400, // 24 hours
+      maxAge: 7 * 24 * 60 * 60, // 7 days, same as the token itself
       path: '/',
     });
 

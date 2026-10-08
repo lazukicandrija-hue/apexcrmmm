@@ -1,9 +1,7 @@
 'use client';
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
-  const router = useRouter();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -27,7 +25,9 @@ export default function LoginPage() {
         return;
       }
 
-      router.push('/dashboard');
+      // Full page load: drops any pages the browser pre-fetched while logged out
+      // (those were cached as redirects to /login and would bounce the user back here)
+      window.location.href = '/dashboard';
     } catch {
       setError('Greška na serveru');
     } finally {
@@ -59,9 +59,6 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <p style={{ marginTop: 24, fontSize: '0.75rem', color: '#666' }}>
-          Demo: admin / apex2026
-        </p>
       </div>
     </div>
   );

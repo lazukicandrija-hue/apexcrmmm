@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState, useRef, Suspense } from 'react';
-import { useRouter, usePathname, useSearchParams } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
 interface User { id: string; username: string; full_name: string; role: string; }
@@ -9,7 +9,6 @@ interface SearchResult { type:string; id:string; title:string; subtitle:string; 
 const PONUDA_TYPES = ['Novogradnja', 'Sekundarni Stanovi', 'Kuće', 'Lokali', 'Rente'];
 
 function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
-  const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [user, setUser] = useState<User | null>(null);
@@ -29,9 +28,9 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     fetch('/api/auth/me').then(r => r.json()).then(d => {
       if (d.user) setUser(d.user);
-      else router.push('/login');
-    }).catch(() => router.push('/login'));
-  }, [router]);
+      else window.location.href = '/login';
+    }).catch(() => { window.location.href = '/login'; });
+  }, []);
 
   // Auto-expand ponuda section when on a properties sub-page
   useEffect(() => {
@@ -51,7 +50,7 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' });
-    router.push('/login');
+    window.location.href = '/login';
   };
 
   const isActive = (href: string) => {

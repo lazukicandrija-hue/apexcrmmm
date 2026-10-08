@@ -46,6 +46,7 @@ ssh $SERVER '
 
   # ===== STEP 6: Remove any stale database from standalone (it must use /data/) =====
   rm -f .next/standalone/apex-crm.db .next/standalone/apex-crm.db-wal .next/standalone/apex-crm.db-shm
+  rm -f .next/standalone/.jwt-secret   # build tracer copies it in; the real one lives in /data
 
   # ===== STEP 7: Restart with DATA_DIR environment variable =====
   pm2 delete apex-crm 2>/dev/null || true

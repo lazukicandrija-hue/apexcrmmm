@@ -10,7 +10,7 @@ import path from 'path';
 // generated once and stored next to the database (never hard-coded in the repo).
 function loadJwtSecret(): string {
   if (process.env.JWT_SECRET) return process.env.JWT_SECRET;
-  const file = path.join(process.env.DATA_DIR || process.cwd(), '.jwt-secret');
+  const file = path.join(/*turbopackIgnore: true*/ process.env.DATA_DIR || process.cwd(), '.jwt-secret');
   try {
     const existing = fs.readFileSync(file, 'utf8').trim();
     if (existing) return existing;
