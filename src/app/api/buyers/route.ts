@@ -52,7 +52,8 @@ export async function POST(request: Request) {
       body.financing || '', body.desired_rooms || '',
       body.preferred_locations ? JSON.stringify(body.preferred_locations) : '',
       body.priority || 'low',
-      body.agent_id || null
+      // Agents own what they create unless someone is picked explicitly
+      body.agent_id || (user.role === 'agent' ? user.id : null)
     );
 
     if (body.notes) {

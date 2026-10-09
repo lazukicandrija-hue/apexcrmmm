@@ -79,7 +79,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const headersList = await headers();
   const user = getCurrentUser(headersList.get('cookie'));
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!user) return NextResponse.json({ error: 'Sesija istekla — ulogujte se ponovo' }, { status: 401 });
 
   try {
     const body = await request.json();
@@ -106,7 +106,8 @@ export async function POST(request: Request) {
       body.cadastral_notes || null, body.contract_signed ? 1 : 0,
       body.street || null, body.building_number || null, body.apartment_number || null,
       body.project_id || null,
-      body.agent_id || null,
+      // Agents own what they create unless someone is picked explicitly
+      body.agent_id || (user.role === 'agent' ? user.id : null),
       body.lift || null,
       now, now
     );
