@@ -3,6 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
 import bcrypt from 'bcryptjs';
+import { ensureTrashTable } from '../trash';
 
 // Use a dedicated persistent data directory that survives deployments.
 // On the server, /opt/apex-crm/data/ is outside .next/standalone/ and never gets wiped.
@@ -213,6 +214,11 @@ function initializeSchema(database: Database.Database) {
   addColumnSafe('properties', 'agent_id', 'TEXT');             // FK to users — koji agent radi na nekretnini
   addColumnSafe('properties', 'lift', 'TEXT');                  // Lift: Da, Ne
   addColumnSafe('buyers', 'agent_id', 'TEXT');                 // FK to users — koji agent radi sa kupcem
+  addColumnSafe('properties', 'created_by', 'TEXT');           // ko je uneo nekretninu (ime korisnika ili API ključa)
+  addColumnSafe('buyers', 'created_by', 'TEXT');               // ko je uneo kupca
+
+  // Korpa: kopije obrisanih zapisa (vidi src/lib/trash.ts)
+  ensureTrashTable(database);
 
   // Migrate: add project publishing and website fields
   addColumnSafe('projects', 'published', 'INTEGER DEFAULT 0');        // 0=draft, 1=published on website

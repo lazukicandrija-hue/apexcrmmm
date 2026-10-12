@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/db/database';
 import { getCurrentUser } from '@/lib/auth';
 import { headers } from 'next/headers';
+import { deleteWithTrash } from '@/lib/trash';
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const headersList = await headers();
@@ -82,6 +83,6 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
 
   const { id } = await params;
   const db = getDb();
-  db.prepare('DELETE FROM buyers WHERE id = ?').run(id);
+  deleteWithTrash(db, 'buyer', id, user);
   return NextResponse.json({ message: 'Kupac obrisan' });
 }

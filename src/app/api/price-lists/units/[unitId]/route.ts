@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db/database';
 import { getCurrentUser } from '@/lib/auth';
+import { deleteWithTrash } from '@/lib/trash';
 
 // PUT /api/price-lists/units/[unitId] — update unit
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ unitId: string }> }) {
@@ -46,7 +47,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
   try {
     const { unitId } = await params;
     const db = getDb();
-    db.prepare('DELETE FROM price_list_units WHERE id = ?').run(unitId);
+    deleteWithTrash(db, 'price_list_unit', unitId, user);
     return NextResponse.json({ success: true });
   } catch (error) {
     return NextResponse.json({ error: 'Greška pri brisanju' }, { status: 500 });

@@ -170,6 +170,11 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
               onClick={() => setSidebarOpen(false)}>
               <span>🤖</span> API Ključevi
             </Link>
+            <Link href="/dashboard/trash"
+              className={`nav-item ${pathname.includes('trash') ? 'active' : ''}`}
+              onClick={() => setSidebarOpen(false)}>
+              <span>🗑</span> Korpa
+            </Link>
             </>
           )}
         </nav>

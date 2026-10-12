@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/db/database';
 import { getCurrentUser, hashPassword } from '@/lib/auth';
 import { headers } from 'next/headers';
+import { deleteWithTrash } from '@/lib/trash';
 
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const headersList = await headers();
@@ -13,7 +14,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
 
   try {
     const db = getDb();
-    db.prepare('DELETE FROM users WHERE id = ?').run(id);
+    deleteWithTrash(db, 'user', id, user);
     return NextResponse.json({ message: 'Korisnik obrisan' });
   } catch (error) {
     console.error('Error deleting user:', error);

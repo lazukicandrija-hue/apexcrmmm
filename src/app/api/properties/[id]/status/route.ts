@@ -23,7 +23,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
   // Audit log
   db.prepare(
-    'INSERT INTO property_audit_log (id, property_id, user_id, user_name, field_name, old_value, new_value) VALUES (?, ?, ?, ?, ?, ?, ?)'
+    "INSERT INTO property_audit_log (id, property_id, user_id, user_name, field_name, old_value, new_value, changed_at) VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))"
   ).run(
     uuidv4(), id, (user as { id: string }).id, (user as { full_name: string }).full_name,
     'Status', property.status, newStatus

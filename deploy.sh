@@ -54,9 +54,11 @@ ssh $SERVER '
   DATA_DIR=/opt/apex-crm/data PORT=3001 pm2 start server.js --name apex-crm --cwd /opt/apex-crm/.next/standalone
   pm2 save
 
-  # ===== STEP 8: Daily automatic backup at 03:00 (installed once, idempotent) =====
-  CRON_LINE="0 3 * * * cd /opt/apex-crm && DATA_DIR=/opt/apex-crm/data node scripts/backup-db.js daily >> /opt/apex-crm/data/backups/backup.log 2>&1"
-  ( crontab -l 2>/dev/null | grep -v "scripts/backup-db.js daily"; echo "$CRON_LINE" ) | crontab -
+  # ===== STEP 8: Automatic backups: every hour (kept 3 days) + daily at 03:00 (kept 90 days) =====
+  BK="cd /opt/apex-crm && DATA_DIR=/opt/apex-crm/data node scripts/backup-db.js"
+  ( crontab -l 2>/dev/null | grep -v "scripts/backup-db.js"; \
+    echo "0 3 * * * $BK daily >> /opt/apex-crm/data/backups/backup.log 2>&1"; \
+    echo "30 * * * * $BK hourly >> /opt/apex-crm/data/backups/backup.log 2>&1" ) | crontab -
 
   echo ""
   echo "✅ Deploy complete!"

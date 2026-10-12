@@ -95,8 +95,8 @@ export async function POST(request: Request) {
 
     const now = new Date().toISOString();
     db.prepare(`
-      INSERT INTO properties (id, code, title, description, location, price, type, area, rooms, status, owner_id, images, published, floor, condition, parking, terrace, heating, cadastral_notes, contract_signed, street, building_number, apartment_number, project_id, agent_id, lift, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO properties (id, code, title, description, location, price, type, area, rooms, status, owner_id, images, published, floor, condition, parking, terrace, heating, cadastral_notes, contract_signed, street, building_number, apartment_number, project_id, agent_id, lift, created_by, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       id, code, body.title, body.description || '', body.location, price, body.type,
       area, rooms, body.status || 'Aktivna',
@@ -109,6 +109,7 @@ export async function POST(request: Request) {
       // Agents own what they create unless someone is picked explicitly
       body.agent_id || (user.role === 'agent' ? user.id : null),
       body.lift || null,
+      user.full_name,
       now, now
     );
 

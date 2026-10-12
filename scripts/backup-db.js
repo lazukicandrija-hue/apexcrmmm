@@ -7,7 +7,7 @@ const Database = require('better-sqlite3');
 
 const DATA_DIR = process.env.DATA_DIR || '/opt/apex-crm/data';
 const label = (process.argv[2] || 'manual').replace(/[^a-z0-9-]/gi, '');
-const KEEP = { daily: 60, deploy: 30 }[label] || 30;
+const KEEP = { hourly: 72, daily: 90, deploy: 30 }[label] || 30;
 
 const src = path.join(DATA_DIR, 'apex-crm.db');
 const dir = path.join(DATA_DIR, 'backups');

@@ -43,8 +43,8 @@ export async function POST(request: Request) {
     const id = uuidv4();
 
     db.prepare(`
-      INSERT INTO buyers (id, first_name, last_name, phone, email, desired_type, location, budget, notes, next_action_date, status, financing, desired_rooms, preferred_locations, priority, agent_id)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO buyers (id, first_name, last_name, phone, email, desired_type, location, budget, notes, next_action_date, status, financing, desired_rooms, preferred_locations, priority, agent_id, created_by)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       id, body.first_name, body.last_name, body.phone || '', body.email || '',
       body.desired_type || '', body.location || '', body.budget || null,
@@ -53,7 +53,8 @@ export async function POST(request: Request) {
       body.preferred_locations ? JSON.stringify(body.preferred_locations) : '',
       body.priority || 'low',
       // Agents own what they create unless someone is picked explicitly
-      body.agent_id || (user.role === 'agent' ? user.id : null)
+      body.agent_id || (user.role === 'agent' ? user.id : null),
+      user.full_name
     );
 
     if (body.notes) {

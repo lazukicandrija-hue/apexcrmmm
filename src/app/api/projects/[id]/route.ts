@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/db/database';
 import { getCurrentUser } from '@/lib/auth';
 import { headers } from 'next/headers';
+import { deleteWithTrash } from '@/lib/trash';
 
 // GET - Single project with its units
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -71,8 +72,9 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
   const db = getDb();
 
   // Unlink properties from this project
-  db.prepare('UPDATE properties SET project_id = NULL WHERE project_id = ?').run(id);
-  db.prepare('DELETE FROM projects WHERE id = ?').run(id);
+  deleteWithTrash(db, 'project', id, user, () => {
+    db.prepare('UPDATE properties SET project_id = NULL WHERE project_id = ?').run(id);
+  });
 
   return NextResponse.json({ message: 'Projekat obrisan' });
 }

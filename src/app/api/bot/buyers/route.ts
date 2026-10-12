@@ -124,6 +124,8 @@ export async function POST(request: Request) {
       body.preferred_locations ? JSON.stringify(body.preferred_locations) : ''
     );
 
+    db.prepare('UPDATE buyers SET created_by = ? WHERE id = ?').run(auth.apiKey ? `bot: ${auth.apiKey.name}` : (auth.user?.full_name ?? null), id);
+
     // Add initial interaction note if notes provided
     if (body.notes) {
       db.prepare(`INSERT INTO buyer_interactions (id, buyer_id, note) VALUES (?, ?, ?)`).run(

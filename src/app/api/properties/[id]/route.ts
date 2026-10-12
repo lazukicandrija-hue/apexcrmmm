@@ -3,6 +3,7 @@ import { getDb } from '@/lib/db/database';
 import { getCurrentUser } from '@/lib/auth';
 import { headers } from 'next/headers';
 import { v4 as uuidv4 } from 'uuid';
+import { deleteWithTrash } from '@/lib/trash';
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const headersList = await headers();
@@ -90,7 +91,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     ];
 
     const insertAudit = db.prepare(
-      'INSERT INTO property_audit_log (id, property_id, user_id, user_name, field_name, old_value, new_value) VALUES (?, ?, ?, ?, ?, ?, ?)'
+      "INSERT INTO property_audit_log (id, property_id, user_id, user_name, field_name, old_value, new_value, changed_at) VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))"
     );
 
     for (const f of auditFields) {
@@ -124,6 +125,6 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
 
   const { id } = await params;
   const db = getDb();
-  db.prepare('DELETE FROM properties WHERE id = ?').run(id);
+  deleteWithTrash(db, 'property', id, user);
   return NextResponse.json({ message: 'Nekretnina obrisana' });
 }

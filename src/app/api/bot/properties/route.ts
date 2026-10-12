@@ -204,6 +204,9 @@ export async function POST(request: Request) {
       now, now
     );
 
+    db.prepare('UPDATE properties SET created_by = ? WHERE id = ?').run(auth.apiKey ? `bot: ${auth.apiKey.name}` : (auth.user?.full_name ?? null), id);
+
+
     return NextResponse.json({
       id,
       code,

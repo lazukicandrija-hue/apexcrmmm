@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/db/database';
 import { getCurrentUser } from '@/lib/auth';
 import { headers } from 'next/headers';
+import { deleteWithTrash } from '@/lib/trash';
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const headersList = await headers();
@@ -42,6 +43,9 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
 
   const { id } = await params;
   const db = getDb();
-  db.prepare('DELETE FROM owners WHERE id = ?').run(id);
+  if (db.prepare('SELECT 1 FROM properties WHERE owner_id = ?').get(id)) {
+    return NextResponse.json({ error: 'Vlasnik ima nekretnine — prvo njih prebacite na drugog vlasnika' }, { status: 409 });
+  }
+  deleteWithTrash(db, 'owner', id, user);
   return NextResponse.json({ message: 'Vlasnik obrisan' });
 }

@@ -83,13 +83,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
     
     db.prepare('UPDATE properties SET images = ? WHERE id = ?').run(JSON.stringify(filtered), id);
 
-    // Try to delete the file (don't fail if it doesn't exist)
-    try {
-      const { unlink } = await import('fs/promises');
-      const dataDir = process.env.DATA_DIR || path.join(process.cwd(), 'data');
-      const fullPath = path.join(dataDir, imagePath);
-      await unlink(fullPath);
-    } catch { /* file might not exist */ }
+    // The file stays on disk so a removed photo can always be put back
 
     return NextResponse.json({ message: 'Slika obrisana', images: filtered });
   } catch (error) {
