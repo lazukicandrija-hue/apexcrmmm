@@ -464,11 +464,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                   <select className="form-select" value={unitForm.floor} onChange={e => setUnitForm({...unitForm, floor: e.target.value})}>
                     <option value="">—</option>
                     <option>Prizemlje</option>
-                    <option>1. sprat</option>
-                    <option>2. sprat</option>
-                    <option>3. sprat</option>
-                    <option>4. sprat</option>
-                    <option>5. sprat</option>
+                    {Array.from({ length: 14 }, (_, i) => <option key={i + 1}>{i + 1}. sprat</option>)}
                     <option>Potkrovlje</option>
                   </select>
                 </div>
